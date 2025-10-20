@@ -38,9 +38,6 @@ export GITHUB_MODEL="gpt-4o-mini"
 cd packages
 docker-compose up -d
 
-# Wait for services to initialize (15-30 seconds)
-sleep 30
-
 # Verify deployment
 curl http://localhost:4000/api/health
 ```
@@ -108,9 +105,9 @@ git --version            # Latest
 3. Set **Token name**: `ai-travel-agents-api`
 4. Set **Expiration**: 90 days (or as per your policy)
 5. **Select scopes**:
-   - ✅ `repo` (Full control of private repositories)
-   - ✅ `read:packages` (Read packages)
-   - ✅ `write:packages` (Write packages)
+   -`repo` (Full control of private repositories)
+   -`read:packages` (Read packages)
+   -`write:packages` (Write packages)
 6. Click **"Generate token"**
 7. **Copy the token** (you won't see it again!)
 
@@ -171,10 +168,10 @@ GitHub Models API provides free access to several models:
 
 | Model | Status | Use Case |
 |-------|--------|----------|
-| `gpt-4o-mini` | ✅ Recommended | Cost-effective, good for travel planning |
-| `gpt-4o` | ✅ Available | More powerful, higher token usage |
-| `claude-3.5-sonnet` | ✅ Available | Strong reasoning capabilities |
-| `phi-4` | ⏳ Limited | Fast inference |
+| `gpt-4o-mini` | Recommended | Cost-effective, good for travel planning |
+| `gpt-4o` | Available | More powerful, higher token usage |
+| `claude-3.5-sonnet` | Available | Strong reasoning capabilities |
+| `phi-4` | Limited | Fast inference |
 
 ### Rate Limits
 
@@ -184,7 +181,7 @@ GitHub Models API provides free access to several models:
 
 ### Pricing
 
-**Free** for GitHub users with verified account. No credit card required.
+**Free** for GitHub users with verified account.
 
 ### Testing Your Token
 
@@ -222,17 +219,6 @@ docker-compose logs -f web-api
 ```bash
 # Check all containers
 docker-compose ps
-
-# Expected output:
-# NAME                                    STATUS
-# ai-travel-agents-web-api                Up
-# ai-travel-agents-tool-customer-query    Up
-# ai-travel-agents-tool-destination-recommendation  Up
-# ai-travel-agents-tool-itinerary-planning  Up
-# ai-travel-agents-tool-echo-ping         Up (optional)
-# ai-travel-agents-tool-web-search        Up (optional)
-# ai-travel-agents-tool-model-inference   Up (optional)
-# ai-travel-agents-tool-code-evaluation   Up (optional)
 ```
 
 ### Step 3: Verify Connectivity
@@ -257,68 +243,6 @@ http://localhost:4200
 ```
 
 Wait for the Angular app to load (first load may take 10-15 seconds).
-
----
-
-## Verification & Testing
-
-### Test 1: Simple Chat Request
-
-```bash
-$body = @{ 
-  message = "Plan a 3-day trip to Tokyo" 
-} | ConvertTo-Json
-
-$response = Invoke-WebRequest -Uri "http://localhost:4000/api/chat" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body $body `
-  -TimeoutSec 30
-
-$lines = $response.Content -split "`n"
-$completeLine = $lines | Where-Object { $_ -match 'agent_complete' } | Select-Object -First 1
-
-if ($completeLine) {
-  Write-Host "✅ SUCCESS"
-  (ConvertFrom-Json $completeLine).data.content
-} else {
-  Write-Host "❌ Failed to get response"
-  $lines | Select-Object -First 5
-}
-```
-
-### Test 2: Frontend UI
-
-1. Open http://localhost:4200
-2. Type a travel query: "Plan a week-long trip to Paris"
-3. Press Enter or click Send
-4. **Expected**: Response displays in chat (not stuck at "Agent Reasoning...")
-
-### Test 3: MCP Tool Integration
-
-```bash
-# Check if tools are registered
-curl http://localhost:4000/api/tools
-
-# Expected: JSON array with available tools
-# [
-#   { name: "customer_query_analyzer", description: "..." },
-#   { name: "destination_recommender", description: "..." },
-#   { name: "itinerary_planner", description: "..." }
-# ]
-```
-
-### Test 4: Monitor Logs
-
-```bash
-# Watch API logs
-docker logs -f web-api
-
-# Watch MCP tool logs
-docker logs -f tool-customer-query
-docker logs -f tool-destination-recommendation
-docker logs -f tool-itinerary-planning
-```
 
 ---
 
@@ -392,128 +316,6 @@ docker logs -f tool-itinerary-planning
 5. **Frontend Display** → Angular renders response in chat UI
 
 ---
-
-## Troubleshooting
-
-### Issue 1: "Cannot connect to GitHub Models API"
-
-**Symptoms**: 
-```
-Error: ECONNREFUSED at models.inference.ai.azure.com
-```
-
-**Solutions**:
-1. Verify token is valid: `curl -H "Authorization: Bearer YOUR_TOKEN"` to https://models.inference.ai.azure.com/chat/completions
-2. Check internet connectivity
-3. Verify `GITHUB_TOKEN` in `.env.docker` (no typos)
-4. Token may have expired - generate a new one at https://github.com/settings/tokens
-
-### Issue 2: Frontend Stuck at "Agent Reasoning..."
-
-**Symptoms**: 
-- Frontend shows loading state indefinitely
-- No response appears in chat
-
-**Solutions**:
-1. **Check backend logs**:
-   ```bash
-   docker logs web-api | tail -20
-   ```
-   Look for errors related to agent setup or GitHub Models API.
-
-2. **Verify MCP services are running**:
-   ```bash
-   docker-compose ps | grep tool
-   # All tool containers should show "Up"
-   ```
-
-3. **Test backend directly**:
-   ```bash
-   curl -X POST http://localhost:4000/api/chat \
-     -H "Content-Type: application/json" \
-     -d '{"message":"Hello"}'
-   ```
-   Response should include `agent_complete` event within 10 seconds.
-
-4. **Check browser console** (F12 Developer Tools → Console):
-   - Look for `[ChatService]` debug logs
-   - Check for `event.data` errors
-
-### Issue 3: "Duplicate handoff agents" Error
-
-**Symptoms**:
-```json
-{"error":"Duplicate handoff agents"}
-```
-
-**Cause**: Agent appears multiple times in the handoff list.
-
-**Solution**: 
-- Already fixed in this version
-- If upgrading from older version, ensure `packages/api/src/orchestrator/llamaindex/index.ts` line 168-176 is updated correctly
-
-### Issue 4: 403 Forbidden from GitHub Models API
-
-**Symptoms**:
-```
-Error: The `models` permission is required to access this endpoint
-```
-
-**Cause**: Using fine-grained token instead of classic token.
-
-**Solution**:
-1. Delete the fine-grained token
-2. Create a new Classic PAT token at https://github.com/settings/tokens
-3. Select scopes: `repo`, `read:packages`, `write:packages`
-4. Update `GITHUB_TOKEN` in `.env.docker`
-
-### Issue 5: MCP Tool Connection Failed
-
-**Symptoms**:
-```
-Error: Failed to connect to customer-query service
-```
-
-**Solutions**:
-1. Verify Docker network:
-   ```bash
-   docker network ls
-   docker network inspect ai-travel-agents_default
-   ```
-
-2. Check MCP service URLs in `.env.docker` use Docker hostnames (e.g., `http://tool-customer-query:5001`)
-
-3. Restart all services:
-   ```bash
-   docker-compose down
-   docker-compose up -d
-   ```
-
-### Issue 6: Port Already in Use
-
-**Symptoms**:
-```
-Error: Address already in use :::4000
-```
-
-**Solutions**:
-```bash
-# Find and kill process on port 4000
-netstat -ano | findstr :4000
-taskkill /PID YOUR_PID /F
-
-# Or change port in .env.docker
-PORT=4001
-```
-
----
-
-## Azure Cloud Deployment (Optional)
-
-### Prerequisites
-- Azure subscription
-- Azure CLI installed
-- Docker images pushed to Azure Container Registry (ACR)
 
 ### Quick Deploy
 
@@ -592,8 +394,8 @@ LOG_LEVEL=error   # Errors only
 
 ## Next Steps
 
-1. ✅ Fork repository to your GitHub account
-2. ✅ Deploy locally with this guide
+1. Fork repository to your GitHub account
+2. Deploy locally with this guide
 3. **Test** the deployment thoroughly
 4. **Extend** by adding custom agents or tools
 5. **Deploy** to Azure using Bicep templates (see `infra/` directory)
