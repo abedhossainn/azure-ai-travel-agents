@@ -95,6 +95,22 @@ export class ApiService {
     }
   }
 
+  async fetchHealth(): Promise<{ status: string; webSearch?: { live: boolean; keyConfigured: boolean; cxConfigured: boolean } } | void> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/health`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const { error } = await response.json();
+        return this.handleApiError(new Error(error || 'Health check failed'), response.status);
+      }
+      return await response.json();
+    } catch (error) {
+      return this.handleApiError(error, 0);
+    }
+  }
+
   stream(message: string, tools: Tools[]) {
     // Reset trackers for each new stream
     this.lastProcessedIndex = 0;

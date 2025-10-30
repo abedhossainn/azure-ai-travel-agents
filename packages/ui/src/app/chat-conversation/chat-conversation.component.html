@@ -6,39 +6,45 @@
       class="text-center flex justify-between items-center mb-10"
     >
       <span>AI Travel Agent Chat</span>
-      <hlm-alert-dialog>
-        <button
-          hlmBtn
-          variant="ghost"
-          size="icon"
-          class="ml-2"
-          title="New Chat"
-          brnAlertDialogTrigger
-        >
-          <ng-icon hlm name="lucideRefreshCw" class="h-4 w-4" />
-        </button>
-        <hlm-alert-dialog-content
-          *brnAlertDialogContent="let ctx"
-          class="w-[400px]"
-        >
-          <hlm-alert-dialog-header>
-            <h3 hlmAlertDialogTitle>Clear chat session?</h3>
-            <p hlmAlertDialogDescription>
-              This will clear all messages from the current chat session and
-              start a new one. This action cannot be undone.
-            </p>
-          </hlm-alert-dialog-header>
 
-          <hlm-alert-dialog-footer>
-            <button hlmAlertDialogCancel (click)="cancelReset(ctx)">
-              Cancel
-            </button>
-            <button hlmAlertDialogAction (click)="confirmReset(ctx)">
-              Continue
-            </button>
-          </hlm-alert-dialog-footer>
-        </hlm-alert-dialog-content>
-      </hlm-alert-dialog>
+      <div class="flex items-center gap-3">
+        <span hlmBadge [ngClass]="webSearchLive() ? 'bg-green-500 text-white' : 'bg-muted'">
+          Web search: {{ webSearchLive() ? 'Live' : 'LLM-only' }}
+        </span>
+        <hlm-alert-dialog>
+          <button
+            hlmBtn
+            variant="ghost"
+            size="icon"
+            class="ml-2"
+            title="New Chat"
+            brnAlertDialogTrigger
+          >
+            <ng-icon hlm name="lucideRefreshCw" class="h-4 w-4" />
+          </button>
+          <hlm-alert-dialog-content
+            *brnAlertDialogContent="let ctx"
+            class="w-[400px]"
+          >
+            <hlm-alert-dialog-header>
+              <h3 hlmAlertDialogTitle>Clear chat session?</h3>
+              <p hlmAlertDialogDescription>
+                This will clear all messages from the current chat session and
+                start a new one. This action cannot be undone.
+              </p>
+            </hlm-alert-dialog-header>
+
+            <hlm-alert-dialog-footer>
+              <button hlmAlertDialogCancel (click)="cancelReset(ctx)">
+                Cancel
+              </button>
+              <button hlmAlertDialogAction (click)="confirmReset(ctx)">
+                Continue
+              </button>
+            </hlm-alert-dialog-footer>
+          </hlm-alert-dialog-content>
+        </hlm-alert-dialog>
+      </div>
     </h3>
   </div>
 

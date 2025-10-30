@@ -11,6 +11,10 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/index.ts",
+    "src/genkit/**/*.ts",
+    "src/scripts/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

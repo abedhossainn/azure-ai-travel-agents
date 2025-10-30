@@ -62,7 +62,7 @@ import { HlmSeparatorDirective } from '@spartan-ng/ui-separator-helm';
 import { HlmSwitchComponent } from '@spartan-ng/ui-switch-helm';
 import { AccordionPreviewComponent } from '../components/accordion/accordion.component';
 import { SkeletonPreviewComponent } from '../components/skeleton-preview/skeleton-preview.component';
-import { ChatEvent, ChatMessage } from '../services/api.service';
+import { ApiService, ChatEvent, ChatMessage } from '../services/api.service';
 import { ChatService } from './chat-conversation.service';
 
 const SAMPLE_PROMPT_1 = `Hello! I'm planning a trip to Iceland and would like your expertise to create a custom itinerary. Please use your destination planning tools and internal resources to suggest a day-by-day plan based on:
@@ -152,8 +152,9 @@ export class ChatConversationComponent implements OnInit {
   samplePrompts = [SAMPLE_PROMPT_1, SAMPLE_PROMPT_2, SAMPLE_PROMPT_3];
 
   messages: ChatMessage[] = [];
+  webSearchLive = signal<boolean>(false);
 
-  constructor(public chatService: ChatService) {
+  constructor(public chatService: ChatService, private api: ApiService) {
     this.chatService.messagesStream.subscribe((messages) => {
       this.messages = messages;
       if (messages.length === 0) return;
@@ -166,6 +167,10 @@ export class ChatConversationComponent implements OnInit {
   async ngOnInit() {
     this.resetChat();
     await this.chatService.fetchAvailableTools();
+    const health = await this.api.fetchHealth();
+    if (health && health.webSearch) {
+      this.webSearchLive.set(!!health.webSearch.live);
+    }
   }
 
   @HostListener('window:keyup.shift.enter', ['$event'])
