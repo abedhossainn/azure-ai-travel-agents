@@ -7,13 +7,14 @@
     "start": "tsx --watch src/index.ts",
     "build": "tsc",
     "smoke": "tsx src/scripts/smoke.ts",
-    "genkit:dev": "GENKIT_ENV=dev genkit start --port 4100 -- node dist/index.js"
+    "genkit:dev": "GENKIT_ENV=dev npm run build && genkit start --port 4100 -- node dist/index.js"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
     "@genkit-ai/google-genai": "^1.22.0",
+    "amadeus": "^8.0.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "cors": "^2.8.5",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "genkit-cli": "^1.22.0",
     "tsx": "^4.19.4",
     "typescript": "^5.3.3"
   },

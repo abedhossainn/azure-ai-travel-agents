@@ -5,7 +5,7 @@
     "moduleResolution": "Node16",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+  "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "outDir": "./dist",
@@ -14,7 +14,8 @@
   "include": [
     "src/index.ts",
     "src/genkit/**/*.ts",
-    "src/scripts/**/*.ts"
+    "src/scripts/**/*.ts",
+    "src/types/**/*.d.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -18,15 +18,27 @@ PORT=4000
 
 Optional: OpenTelemetry variables if you use tracing/telemetry.
 
-Optional: Enable Google Custom Search for the `web-search` flow (live web results). If not set, the flow returns an LLM-only answer with a disclaimer.
+Optional: Enable Amadeus live data for the `web-search` flow (recommended). If not set, the flow returns an LLM-only answer with a disclaimer.
 
 ```ini
-# Either set GOOGLE_CSE_KEY or GOOGLE_API_KEY (GOOGLE_CSE_KEY takes precedence)
-# Aliases also supported: GOOGLE_CUSTOM_SEARCH_API_KEY, GOOGLE_CUSTOM_SEARCH_CX or GOOGLE_CUSTOM_SEARCH_ENGINE_ID
-GOOGLE_CSE_KEY=<google_cse_api_key>
-# or GOOGLE_API_KEY=<google_api_key> (or GOOGLE_CUSTOM_SEARCH_API_KEY)
-GOOGLE_CSE_CX=<custom_search_engine_id>  # or GOOGLE_CUSTOM_SEARCH_CX / GOOGLE_CUSTOM_SEARCH_ENGINE_ID
+# Amadeus (Self-Service):
+# Provide either the AMADEUS_* variables or KEY/SECRET as fallback
+AMADEUS_CLIENT_ID=<your_amadeus_client_id>
+AMADEUS_CLIENT_SECRET=<your_amadeus_client_secret>
+# Hostname: 'test' (sandbox) or 'production'
+AMADEUS_HOST=test
 ```
+
+### Live research behavior (Amadeus)
+
+When Amadeus is enabled, the Web Search flow will:
+
+- Extract a destination from the user query
+- Resolve the city location via Amadeus (coordinates)
+- Fetch Tours & Activities near the destination
+- Summarize typical experiences and price ranges, and provide budget tips
+
+If Amadeus isn’t configured or fails, it falls back to an LLM-only answer with a brief note.
 
 ## Run locally
 
