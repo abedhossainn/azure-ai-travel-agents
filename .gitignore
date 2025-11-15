@@ -424,3 +424,5 @@ dist
 docs/.vuepress/dist/
 docs/.vuepress/.cache/
 docs/.vuepress/.temp/
+CACHING.md
+OPEN-WEBUI.md
