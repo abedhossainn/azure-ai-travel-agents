@@ -432,3 +432,4 @@ PROJECT_STATUS.md
 LICENSE.md
 # Genkit runtime artifacts - local only
 packages/api/.genkit/
+packages/api/package-lock.json
