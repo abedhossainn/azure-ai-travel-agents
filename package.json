@@ -1,0 +1,13 @@
+{
+  "name": "azure-ai-travel-agents",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "build": "npm --workspaces run build",
+    "start": "npm --workspaces run start"
+  }
+}
