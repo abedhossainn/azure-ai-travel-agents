@@ -430,3 +430,5 @@ websearch.txt
 open-webui.sh
 PROJECT_STATUS.md
 LICENSE.md
+# Genkit runtime artifacts - local only
+packages/api/.genkit/
