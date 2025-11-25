@@ -1,4 +1,6 @@
 import { createClient, RedisClientType } from 'redis';
+import fs from 'fs';
+import path from 'path';
 
 let redisClient: RedisClientType | null = null;
 let isConnecting = false;
@@ -74,6 +76,17 @@ export function getCacheKey(namespace: string, params: Record<string, any>): str
   return `amadeus:${namespace}:${sortedParams}`;
 }
 
+// Append cache metrics to local-reports/modified-api.log for offline parsing
+function appendCacheMetric(line: string) {
+  try {
+    const outPath = path.resolve(process.cwd(), '../../local-reports/modified-api.log');
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.appendFileSync(outPath, line + '\n');
+  } catch {
+    // ignore logging errors
+  }
+}
+
 /**
  * Get cached data
  */
@@ -86,8 +99,10 @@ export async function getCached<T>(key: string): Promise<T | null> {
     const cached = await redisClient.get(key);
     if (!cached) return null;
 
-    const data = JSON.parse(cached);
-    console.log(`✓ Cache HIT: ${key}`);
+  const data = JSON.parse(cached);
+  const hitLine = `✓ Cache HIT: ${key}`;
+  console.log(hitLine);
+  appendCacheMetric(hitLine);
     return data as T;
   } catch (error: any) {
     return null;
@@ -108,8 +123,10 @@ export async function setCached(key: string, data: any, ttlSeconds: number): Pro
   }
 
   try {
-    await redisClient.setEx(key, ttlSeconds, JSON.stringify(data));
-    console.log(`✓ Cache SET: ${key} (TTL: ${ttlSeconds}s)`);
+  await redisClient.setEx(key, ttlSeconds, JSON.stringify(data));
+  const setLine = `✓ Cache SET: ${key} (TTL: ${ttlSeconds}s)`;
+  console.log(setLine);
+  appendCacheMetric(setLine);
   } catch (error: any) {
     // Cache set error - silently ignore
   }
@@ -130,7 +147,9 @@ export async function withCache<T>(
   }
 
   // Cache miss - fetch fresh data
-  console.log(`✗ Cache MISS: ${cacheKey}`);
+  const missLine = `✗ Cache MISS: ${cacheKey}`;
+  console.log(missLine);
+  appendCacheMetric(missLine);
   const freshData = await fetchFn();
 
   // Store in cache for next time

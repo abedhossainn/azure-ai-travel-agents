@@ -18,141 +18,155 @@ interface IntentAnalysis {
 }
 
 /**
- * Analyze user query to determine intent using LLM
+ * Analyze user query to determine intent using KEYWORDS FIRST (minimal AI calls)
  */
-async function analyzeIntent(query: string): Promise<IntentAnalysis> {
-  const prompt = `Analyze this travel query and classify the intent. Return ONLY valid JSON:
-{
-  "intent": "simple_question" | "research_only" | "recommendation" | "itinerary" | "full_planning",
-  "confidence": 0.0-1.0,
-  "reasoning": "brief explanation"
-}
-
-Intent Types:
-- simple_question: Single-category query (just flights, hotels, or activities)
-- research_only: Wants multiple categories but no itinerary
-- recommendation: Asking for destination suggestions
-- itinerary: Wants day-by-day plan
-- full_planning: Complete trip plan with everything
-
-Query: ${query}`;
-
-  try {
-    const { text } = await ai.generate({ prompt });
-    const parsed = JSON.parse(text?.trim() || "{}");
-    return {
-      intent: parsed.intent || "full_planning",
-      confidence: parsed.confidence || 0.5,
-      reasoning: parsed.reasoning || "Default classification",
-    };
-  } catch {
-    return {
-      intent: "full_planning",
-      confidence: 0.5,
-      reasoning: "Fallback to full planning due to parse error",
-    };
+export function analyzeIntent(query: string): IntentAnalysis {
+  const lower = query.toLowerCase();
+  
+  // Check for recommendation queries (most specific - check first)
+  if (/(recommend|suggest|where should|best destination|top destination|which place|which city).*(go|visit|travel)/i.test(lower)) {
+    return { intent: "recommendation", confidence: 0.9, reasoning: "Keyword match: recommendation" };
   }
+  
+  // Check for full planning queries (trip/plan/itinerary)
+  if (/(plan.*trip|create.*itinerary|organize.*trip|book.*trip|schedule.*trip|full.*plan|complete.*plan)/i.test(lower)) {
+    return { intent: "full_planning", confidence: 0.9, reasoning: "Keyword match: full planning" };
+  }
+  
+  // Check for itinerary-only queries (no flights/hotels mentioned)
+  if (/(itinerary|schedule|day by day)(?!.*flight|.*hotel)/i.test(lower)) {
+    return { intent: "itinerary", confidence: 0.8, reasoning: "Keyword match: itinerary" };
+  }
+  
+  // Check for research queries (multiple categories, no planning words)
+  const hasMultiple = [
+    /(flight|fly)/i.test(lower),
+    /(hotel|accommodation)/i.test(lower),
+    /(activity|attraction|things to do)/i.test(lower)
+  ].filter(Boolean).length >= 2;
+  
+  if (hasMultiple && !/(plan|itinerary|schedule)/i.test(lower)) {
+    return { intent: "research_only", confidence: 0.8, reasoning: "Keyword match: research" };
+  }
+  
+  // Check for single-category queries
+  const categories = {
+    flight: /(flight|flights|airfare)/i.test(lower),
+    hotel: /(hotel|hotels|accommodation)/i.test(lower),
+    activity: /(activity|activities|attraction|things to do)/i.test(lower)
+  };
+  
+  const singleCategory = Object.values(categories).filter(Boolean).length === 1;
+  if (singleCategory) {
+    return { intent: "simple_question", confidence: 0.8, reasoning: "Keyword match: single category" };
+  }
+  
+  // Default: full planning (when in doubt, provide everything)
+  return {
+    intent: "full_planning",
+    confidence: 0.7,
+    reasoning: "Default to full planning",
+  };
 }
 
 /**
- * Extract travel context from query (origin, destination, dates, adults)
+ * Extract travel context from query using LLM (now that we have Ollama with no quota limits)
+ * This provides much better accuracy than regex patterns
  */
-async function extractContext(query: string) {
-  const prompt = `Extract travel parameters from this query. Return ONLY valid JSON with NO markdown formatting:
-{
-  "origin": "IATA code or city name (e.g., 'JFK', 'New York', 'NYC')",
-  "destination": "City or region name (e.g., 'London', 'Paris', 'Tokyo')",
-  "startDate": "YYYY-MM-DD or null",
-  "endDate": "YYYY-MM-DD or null",
-  "month": "Full month name or null (e.g., 'April', 'December')",
-  "year": 2025,
-  "days": number or null,
-  "adults": number (default 2)
-}
+export async function extractContext(query: string) {
+  const prompt = `Extract travel planning information from this query. Return ONLY a JSON object, no other text.
 
-IMPORTANT:
-- Extract IATA codes like JFK, LAX, LHR as-is for origin
-- Extract city names like London, Paris, Tokyo as-is for destination  
-- If month name is mentioned (e.g., "April"), set month field to that name
-- Default year is 2025 unless another year is mentioned
+Query: "${query}"
 
-Query: "${query}"`;
+Extract these fields:
+- origin: departure city (e.g., "New York", "London", "Tokyo") or null if not mentioned
+- destination: destination city (e.g., "Paris", "Rome", "Bangkok") or null if not mentioned  
+- startDate: travel start date in YYYY-MM-DD format, or null if not mentioned
+- endDate: travel end date in YYYY-MM-DD format, or null if not mentioned
+- adults: number of travelers (default: 2 if not mentioned)
+- days: trip duration in days (default: 7 if not mentioned)
+
+Important:
+- If a month is mentioned without a day, use the 10th of that month
+- If a year is not mentioned, use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1} for months that have passed
+- Calculate endDate from startDate + days if only duration is given
+- Return valid JSON only, no markdown, no explanations
+
+Example output:
+{"origin":"New York","destination":"Paris","startDate":"2026-03-10","endDate":"2026-03-13","adults":2,"days":3}`;
 
   try {
-    const { text } = await ai.generate({ prompt });
-    // Remove markdown code blocks if present
-    const cleaned = text?.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim() || "{}";
-    const parsed = JSON.parse(cleaned);
+    const response = await ai.generate({
+      prompt,
+      config: { temperature: 0.1 }, // Low temperature for factual extraction
+    });
+
+    const text = response.text || response.output || '';
     
-      // Fallback: Use regex to extract common patterns if LLM fails
-      if (!parsed.origin || !parsed.destination) {
-        const originMatch = query.match(/\b([A-Z]{3})\b/); // IATA codes like JFK, LAX
-        const toMatch = query.match(/\bto\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i); // "to London", "to New York"
-        const fromMatch = query.match(/\bfrom\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i); // "from Paris"
-      
-        if (!parsed.origin && (originMatch || fromMatch)) {
-          parsed.origin = originMatch?.[1] || fromMatch?.[1];
-        }
-        if (!parsed.destination && toMatch) {
-          parsed.destination = toMatch[1];
-        }
-      }
+    // Try to extract JSON from the response (in case LLM adds extra text)
+    const jsonMatch = text.match(/\{[^}]+\}/);
+    if (!jsonMatch) {
+      console.warn('[EXTRACT] No JSON found in LLM response, using defaults');
+      return {
+        origin: undefined,
+        destination: undefined,
+        startDate: getDefaultStartDate(),
+        endDate: getDefaultEndDate(7),
+        adults: 2,
+      };
+    }
+
+    const extracted = JSON.parse(jsonMatch[0]);
     
-    // If only month is provided, choose a deterministic date in that month (10th)
-    if (!parsed.startDate && typeof parsed.month === "string" && parsed.month.trim()) {
-      const monthName = parsed.month.trim().toLowerCase();
-      const monthIndex = ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(monthName);
-      const now = new Date();
-      const year = Number.isInteger(parsed.year) ? parsed.year : (monthIndex !== -1 && monthIndex < now.getMonth() ? now.getFullYear() + 1 : now.getFullYear());
-      if (monthIndex !== -1) {
-        const m = String(monthIndex + 1).padStart(2, '0');
-        parsed.startDate = `${year}-${m}-10`;
-      }
+    // Post-process: calculate dates if needed
+    if (!extracted.startDate && extracted.days) {
+      extracted.startDate = getDefaultStartDate();
+    }
+    if (extracted.startDate && extracted.days && !extracted.endDate) {
+      const start = new Date(extracted.startDate + "T00:00:00Z");
+      start.setUTCDate(start.getUTCDate() + (extracted.days || 7));
+      extracted.endDate = start.toISOString().slice(0, 10);
     }
     
-    // If startDate still missing, choose ~6 weeks from now
-    if (!parsed.startDate) {
-      const d = new Date();
-      d.setUTCDate(d.getUTCDate() + 42);
-      parsed.startDate = d.toISOString().slice(0, 10);
-    }
-    
-    // Compute endDate if missing
-    if (!parsed.endDate && parsed.startDate) {
-      const d = new Date(parsed.startDate + "T00:00:00Z");
-      d.setUTCDate(d.getUTCDate() + Math.max(1, parsed.days || 7));
-      parsed.endDate = d.toISOString().slice(0, 10);
-    }
+    console.log('[EXTRACT] LLM extracted:', JSON.stringify(extracted));
     
     return {
-      origin: parsed.origin || undefined,
-      destination: parsed.destination || undefined,
-      startDate: parsed.startDate || undefined,
-      endDate: parsed.endDate || undefined,
-      adults: Number.isInteger(parsed.adults) ? parsed.adults : 2,
+      origin: extracted.origin || undefined,
+      destination: extracted.destination || undefined,
+      startDate: extracted.startDate || getDefaultStartDate(),
+      endDate: extracted.endDate || getDefaultEndDate(extracted.days || 7),
+      adults: extracted.adults || 2,
     };
-  } catch {
-    // Fallback defaults
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() + 42);
-    const startDate = d.toISOString().slice(0, 10);
-    d.setUTCDate(d.getUTCDate() + 7);
-    const endDate = d.toISOString().slice(0, 10);
-    
+  } catch (error) {
+    console.error('[EXTRACT] Error using LLM for extraction:', error);
+    // Fallback to defaults
     return {
       origin: undefined,
       destination: undefined,
-      startDate,
-      endDate,
+      startDate: getDefaultStartDate(),
+      endDate: getDefaultEndDate(7),
       adults: 2,
     };
   }
 }
 
+// Helper functions for default dates
+function getDefaultStartDate(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 42); // 6 weeks from now
+  return d.toISOString().slice(0, 10);
+}
+
+function getDefaultEndDate(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 42 + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * Derive which categories to include based on query keywords
  */
-function deriveIncludeFlags(query: string): { 
+export function deriveIncludeFlags(query: string): { 
   includeFlights: boolean; 
   includeHotels: boolean; 
   includeActivities: boolean;
@@ -205,7 +219,7 @@ async function tryLeanResponse(query: string): Promise<string | null> {
     }
   
   // Invoke master agent with single section
-  const result = await masterAgent({
+  const flowResult = await masterAgent.run({
     query,
     needsFlights: flags.includeFlights,
     needsHotels: flags.includeHotels,
@@ -216,11 +230,19 @@ async function tryLeanResponse(query: string): Promise<string | null> {
     needsRecommendations: false,
     ...context,
   });
-  
+  // Unwrap Genkit flow result ({ result, telemetry })
+  const result = (flowResult as any)?.result ?? flowResult;
+
   const section = flags.includeFlights ? "flights" : flags.includeHotels ? "hotels" : "activities";
-  const lean = formatLeanResponse(result, section as any);
+  const lean = formatLeanResponse(result as any, section as any);
   
-  if (!lean || lean.trim().length < 10) return null;
+  // Debug: log what we got
+  console.log(`[LEAN] section=${section}, hasData=${Boolean((result as any)[section])}, leanLength=${lean?.length || 0}`);
+  
+  if (!lean || lean.trim().length < 10) {
+    console.log(`[LEAN] Fallback to full response - lean too short or empty`);
+    return null;
+  }
 
   return lean;
 }
@@ -229,17 +251,22 @@ async function tryLeanResponse(query: string): Promise<string | null> {
  * Main routing function - all queries go through master agent
  */
 export async function routeQuery(query: string, days?: number): Promise<string> {
+  console.log(`[ROUTE] Query: "${query}"`);
+  
   // 1. Try lean response for simple queries
   const lean = await tryLeanResponse(query);
   if (lean) {
+    console.log(`[ROUTE] Returning lean response`);
     return lean;
   }
 
-  // 2. Analyze intent for full routing
-  const analysis = await analyzeIntent(query);
+  // 2. Analyze intent for full routing (synchronous keyword-based)
+  const analysis = analyzeIntent(query);
+  console.log(`[ROUTE] Intent: ${analysis.intent} (${analysis.confidence})`);
 
-  // 3. Extract context
+  // 3. Extract context using LLM (async now)
   const context = await extractContext(query);
+  console.log(`[ROUTE] Context:`, JSON.stringify(context));
 
   // 4. Route to master agent with appropriate flags
   let result: any;
@@ -247,7 +274,10 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
   switch (analysis.intent) {
     case "simple_question":
       const flags = deriveIncludeFlags(query);
-      result = await masterAgent({
+      {
+        // Execute flow and unwrap Genkit result
+      }
+      const r0 = await masterAgent.run({
         query,
         needsFlights: flags.includeFlights,
         needsHotels: flags.includeHotels,
@@ -258,10 +288,14 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
         needsRecommendations: false,
         ...context,
       });
+      result = (r0 as any)?.result ?? r0;
       break;
 
     case "research_only":
-      result = await masterAgent({
+      {
+        // Execute flow and unwrap Genkit result
+      }
+      const r1 = await masterAgent.run({
         query,
         needsFlights: true,
         needsHotels: true,
@@ -272,10 +306,14 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
         needsRecommendations: false,
         ...context,
       });
+      result = (r1 as any)?.result ?? r1;
       break;
 
     case "recommendation":
-      result = await masterAgent({
+      {
+        // Execute flow and unwrap Genkit result
+      }
+      const r2 = await masterAgent.run({
         query,
         needsFlights: false,
         needsHotels: false,
@@ -286,25 +324,32 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
         needsRecommendations: true,
         ...context,
       });
+      result = (r2 as any)?.result ?? r2;
       break;
 
     case "itinerary":
-      result = await masterAgent({
+      // User wants day-by-day plan, but should also include hotels and insights
+      {
+        // Execute flow and unwrap Genkit result
+      }
+      const r3 = await masterAgent.run({
         query,
         needsFlights: false,
-        needsHotels: false,
+        needsHotels: true,
         needsActivities: true,
         needsItinerary: true,
-        needsInsights: false,
+        needsInsights: true,
         needsCost: false,
         needsRecommendations: false,
         ...context,
       });
+      result = (r3 as any)?.result ?? r3;
       break;
 
     case "full_planning":
     default:
-      result = await masterAgent({
+      console.log(`[ROUTE] Full planning mode - enabling all agents`);
+      const r4 = await masterAgent.run({
         query,
         needsFlights: true,
         needsHotels: true,
@@ -315,8 +360,11 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
         needsRecommendations: false,
         ...context,
       });
+      result = (r4 as any)?.result ?? r4;
+      console.log(`[ROUTE] Master agent result keys:`, Object.keys(result || {}));
       break;
   }
 
-  return formatFullResponse(result);
+  console.log(`[ROUTE] Formatting response with data:`, JSON.stringify(result).substring(0, 200));
+  return formatFullResponse(result as any);
 }

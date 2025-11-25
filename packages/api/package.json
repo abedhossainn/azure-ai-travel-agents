@@ -6,9 +6,26 @@
   "scripts": {
     "start": "tsx --watch src/index.ts",
     "build": "tsc",
-    "smoke": "tsx src/scripts/smoke.ts",
+    
     "genkit:dev": "GENKIT_ENV=dev npm run build && genkit start --port 4100 -- node dist/index.js",
-    "test:lean": "tsx src/scripts/lean-tests.ts"
+    "genkit:mcp": "npm run build && genkit mcp -- node dist/index.js",
+    "genkit:mcp:dev": "GENKIT_ENV=dev npm run build && genkit mcp -- node dist/index.js",
+    
+    "benchmark": "tsx src/scripts/benchmark.ts",
+    "benchmark:cache": "tsx src/scripts/cache_benchmark.ts",
+    "benchmark:concurrency": "tsx src/scripts/concurrency.ts",
+    "benchmark:compare": "tsx src/scripts/compare_benchmarks.ts",
+    "benchmark:agents": "tsx src/scripts/compare_agents.ts",
+    
+    "analyze:cache": "tsx src/scripts/analyze_cache.ts",
+    "analyze:cost": "tsx src/scripts/cost_estimate.ts",
+    "analyze:logs": "tsx src/scripts/parse_logs.ts",
+    "analyze:tokens": "tsx src/scripts/test_tokens.ts",
+    
+    "test:query": "tsx src/scripts/send_query_server.ts",
+    
+    "plot": "python3 ../../local-reports/plot_benchmarks.py ../../local-reports/benchmark-comparison.csv",
+    "plot:concurrency": "python3 ../../local-reports/plot_concurrency.py"
   },
   "files": [
     "dist"

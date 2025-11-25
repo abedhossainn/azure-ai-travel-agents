@@ -1,6 +1,7 @@
 import { z } from "genkit";
 import { ai } from "../../ai.js";
 import Amadeus from "amadeus";
+import { performance } from "node:perf_hooks";
 import { withCache, getCacheKey, CACHE_TTL } from "../../../utils/cache.js";
 import { flightAgent, FlightAgentOutputSchema } from "./flight-agent.js";
 import { hotelAgent, HotelAgentOutputSchema } from "./hotel-agent.js";
@@ -168,10 +169,38 @@ export const masterAgent = ai.defineFlow(
       // Build sub-agent task list based on intent flags
       const tasks: { key: string; promise: Promise<any> }[] = [];
 
+      // Small helper to time sub-agent promises; logs METRIC lines for parsing
+      function timedTask<T>(key: string, p: Promise<T>): Promise<T> {
+        const start = performance.now();
+        const writeMetric = (line: string) => {
+          try {
+            // Always log to console
+            console.log(line);
+            // Also append to local-reports/modified-api.log so offline scripts can parse reliably
+            // Note: process.cwd() here is packages/api; ../../local-reports resolves to repo/local-reports
+            const fs = require('fs');
+            const path = require('path');
+            const outPath = path.resolve(process.cwd(), '../../local-reports/modified-api.log');
+            fs.mkdirSync(path.dirname(outPath), { recursive: true });
+            fs.appendFileSync(outPath, line + '\n');
+          } catch {
+            // ignore file append errors
+          }
+        };
+        return p.then((res) => {
+          const dur = Math.round(performance.now() - start);
+          writeMetric(`METRIC: SUBAGENT ${key} durationMs=${dur}`);
+          return res;
+        }).catch((err) => {
+          writeMetric(`METRIC: SUBAGENT ${key} ERROR=${err?.message || "unknown"}`);
+          throw err;
+        });
+      }
+
       if (input.needsFlights && originIata && destIata && input.startDate) {
         tasks.push({
           key: "flights",
-          promise: flightAgent({
+          promise: timedTask("flights", flightAgent.run({
             origin: originIata,
             destination: destIata,
             departureDate: input.startDate,
@@ -180,14 +209,14 @@ export const masterAgent = ai.defineFlow(
             currency: input.currency,
             originCountry,
             destCountry,
-          }),
+          })),
         });
       }
 
       if (input.needsHotels && destIata && input.startDate && input.endDate) {
         tasks.push({
           key: "hotels",
-          promise: hotelAgent({
+          promise: timedTask("hotels", hotelAgent.run({
             cityCode: destIata.slice(0, 3),
             checkInDate: input.startDate,
             checkOutDate: input.endDate,
@@ -195,7 +224,7 @@ export const masterAgent = ai.defineFlow(
             roomQuantity: 1,
             currency: input.currency,
             destCountry,
-          }),
+          })),
         });
       }
 
@@ -205,11 +234,11 @@ export const masterAgent = ai.defineFlow(
         } else {
         tasks.push({
           key: "activities",
-          promise: activitiesAgent({
+          promise: timedTask("activities", activitiesAgent.run({
             latitude: destLat!,
             longitude: destLon!,
             radius: 30,
-          }),
+          })),
         });
         }
       }
@@ -221,40 +250,40 @@ export const masterAgent = ai.defineFlow(
         
         tasks.push({
           key: "itinerary",
-          promise: (async () => {
+          promise: timedTask("itinerary", (async () => {
             const [activityData, hotelData] = await Promise.all([
               activityPromise || Promise.resolve(null),
               hotelPromise || Promise.resolve(null),
             ]);
-            return itineraryAgent({
+            return itineraryAgent.run({
               destination: input.destination!,
               startDate: input.startDate!,
               endDate: input.endDate!,
               activities: activityData?.activities,
               hotels: hotelData?.hotels,
             });
-          })(),
+          })()),
         });
       }
 
       if (input.needsInsights && input.destination && input.startDate) {
         tasks.push({
           key: "insights",
-          promise: insightsAgent({
+          promise: timedTask("insights", insightsAgent.run({
             destination: input.destination,
             startDate: input.startDate,
             endDate: input.endDate,
             currency: input.currency,
-          }),
+          })),
         });
       }
 
       if (input.needsRecommendations) {
         tasks.push({
           key: "recommendations",
-          promise: recommendationAgent({
+          promise: timedTask("recommendations", recommendationAgent.run({
             query: input.query,
-          }),
+          })),
         });
       }
 
@@ -269,8 +298,11 @@ export const masterAgent = ai.defineFlow(
         endDate: input.endDate,
       };
       
+      // Unwrap .result from Genkit flow responses
       tasks.forEach((task, idx) => {
-        response[task.key] = results[idx];
+        const flowResult = results[idx];
+        // Genkit .run() returns {result, telemetry}, extract just the result
+        response[task.key] = flowResult?.result ?? flowResult;
       });
 
       // If cost breakdown requested and we have data, calculate it
@@ -279,12 +311,19 @@ export const masterAgent = ai.defineFlow(
           ? Math.max(1, Math.ceil((new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / (1000 * 60 * 60 * 24)))
           : 7;
         
-        response.cost = await costAgent({
-          flights: response.flights,
-          hotels: response.hotels,
-          activities: response.activities,
-          days,
-        });
+        try {
+          const costResult = await timedTask("cost", costAgent.run({
+            flights: response.flights,
+            hotels: response.hotels,
+            activities: response.activities,
+            days,
+          }));
+          // Unwrap .result from Genkit flow response
+          response.cost = costResult?.result ?? costResult;
+        } catch (costError: any) {
+          console.log(`[COST AGENT] Skipped due to error: ${costError?.message || "unknown"}`);
+          // Cost calculation is optional - continue without it
+        }
       }
 
       return response;

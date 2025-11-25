@@ -1,6 +1,6 @@
 /**
  * Response formatter for multi-agent travel planning
- * Formats sub-agent outputs into the target structure (as seen in websearch.txt)
+ * Formats sub-agent outputs into the target structure
  */
 
 interface FlightData {
@@ -112,7 +112,10 @@ interface MasterAgentResponse {
  * Format flight details section
  */
 export function formatFlightSection(data: FlightData, origin?: string, destination?: string): string {
+  console.log(`[FORMAT] formatFlightSection called, hasFlights=${Boolean(data.flights)}, flightsLength=${data.flights?.length || 0}`);
+  
   if (!data.flights || data.flights.length === 0) {
+    console.log(`[FORMAT] No flights data to format`);
     return "";
   }
 

@@ -28,7 +28,22 @@
                         ]
                     }
                 }
+            }
+        },
+        {
+            "label": "Run Genkit MCP Server",
+            "type": "shell",
+            "command": "npm run genkit:mcp:dev",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/api"
             },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "echo": true,
+                "focus": false,
+                "panel": "shared"
+            }
         }
     ]
 }

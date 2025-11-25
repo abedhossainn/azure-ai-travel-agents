@@ -6,36 +6,11 @@
     "password": true
   }],
   "servers": {
-    "tool-echo-ping": {
-      "headers": {
-        "Authorization": "Bearer ${input:toolEchoPingAccessToken}",
-      },
-      "type": "http",
-      "url": "http://localhost:5007/mcp"
+    "genkit": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/packages/api/node_modules/.bin/genkit",
+      "args": ["mcp"],
+      "cwd": "/home/abed/SENG/691 Agentic AI/Project/packages/api"
     },
-    "tool-web-search": {
-      "type": "sse",
-      "url": "http://localhost:5006/sse"
-    },
-    "tool-model-inference": {
-      "type": "sse",
-      "url": "http://localhost:5005/sse"
-    },
-    "tool-code-evaluation": {
-      "type": "sse",
-      "url": "http://localhost:5004/sse"
-    },
-    "tool-itinerary-planning": {
-      "type": "http",
-      "url": "http://localhost:5003/mcp"
-    },
-    "tool-destination-recommendation": {
-      "type": "http",
-      "url": "http://localhost:5002/mcp"
-    },
-    "tool-customer-query": {
-      "type": "http",
-      "url": "http://localhost:5001/mcp"
-    }
   }
 }

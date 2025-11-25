@@ -8,7 +8,13 @@ import express from "express";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { initRedis, getCacheStats, clearCachePattern } from "./utils/cache.js";
+import { getAiUsage } from "./utils/usage.js";
+import { getAiProvider } from "./genkit/ai.js";
 import { routeQuery } from "./utils/intent-router-v2.js";
+import { requestQueue } from "./utils/request-queue.js";
+
+// Register all Genkit flows for telemetry and dev UI traces
+import "./genkit/register-flows.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -40,9 +46,6 @@ app.use(cors());
 app.use(express.json());
 
 const apiRouter = express.Router();
-// Fallbacks removed: we target a single model via env `model` (default: gemini-2.5-flash-lite).
-
-
 
 // Health check endpoint
 apiRouter.get("/health", async (req, res) => {
@@ -56,10 +59,19 @@ apiRouter.get("/health", async (req, res) => {
     process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
   const live = Boolean(googleKey && googleCx);
   const cacheStats = await getCacheStats();
+  const queueStats = requestQueue.getStats();
+  const aiUsage = await getAiUsage();
+  const dailyLimit = Number(process.env.AI_DAILY_LIMIT || 0) || null;
+  const monthlyLimit = Number(process.env.AI_MONTHLY_LIMIT || 0) || null;
+  const aiProvider = getAiProvider();
+  
   res.status(200).json({ 
     status: "OK", 
     webSearch: { live, keyConfigured: Boolean(googleKey), cxConfigured: Boolean(googleCx) },
-    cache: cacheStats
+    cache: cacheStats,
+    queue: queueStats,
+    aiUsage: { ...aiUsage, dailyLimit, monthlyLimit },
+    aiProvider
   });
 });
 
@@ -288,7 +300,6 @@ openAIRouter.post("/chat/completions", async (req, res) => {
     const days = extractDays(content);
     
     if (stream) {
-      // Streaming response with real-time reasoning
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
@@ -316,24 +327,14 @@ openAIRouter.post("/chat/completions", async (req, res) => {
       try {
         const chunkSize = 80;
         const startTime = Date.now();
-        
-        // 1. Analyze intent first
-        writeChunk("**Analyzing your request**\n");
-        writeChunk(`> Query: "${content.slice(0, 80)}..."\n\n`);
-        
-        // Route to appropriate flow based on intent
-        const result = await routeQuery(content, days);
+        // Use routeQuery which properly handles intent analysis and formatting
+        const formatted = await routeQuery(content, days);
         const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        
-        // Stream the formatted markdown response
-        writeChunk("**Your Travel Plan**\n\n");
-        for (let i = 0; i < result.length; i += chunkSize) {
-          writeChunk(result.slice(i, i + chunkSize));
+        for (let i = 0; i < formatted.length; i += chunkSize) {
+          writeChunk(formatted.slice(i, i + chunkSize));
           await new Promise(resolve => setTimeout(resolve, 25));
         }
         writeChunk(`\n\n---\n\n*Response time: ${processingTime}s*\n`);
-
-        // Send final chunk
         const finalChunk = {
           id: chatId,
           object: "chat.completion.chunk",
@@ -358,8 +359,8 @@ openAIRouter.post("/chat/completions", async (req, res) => {
         res.end();
       }
     } else {
-      // Non-streaming response using master agent routing
-      const result = await routeQuery(content, days);
+      // Non-streaming response
+      const formatted = await routeQuery(content, days);
       const now = Math.floor(Date.now() / 1000);
       return res.status(200).json({
         id: "chatcmpl_" + Math.random().toString(36).slice(2),
@@ -370,7 +371,7 @@ openAIRouter.post("/chat/completions", async (req, res) => {
           {
             index: 0,
             finish_reason: "stop",
-            message: { role: "assistant", content: result },
+            message: { role: "assistant", content: formatted },
           },
         ],
         usage: { prompt_tokens: null, completion_tokens: null, total_tokens: null },
@@ -387,14 +388,17 @@ app.use("/v1", openAIRouter);
 // Add a root route for API information
 app.get("/", (req, res) => {
   res.json({
-    message: "AI Travel Agents API - Genkit Powered",
+    name: "AI Travel Agents API",
+    description: "Genkit + Ollama/Gemini powered travel planning",
     version: "2.0.0",
     endpoints: {
-      health: "/api/health",
-      chat: "/api/chat (SSE streaming)",
-      chatJson: "/api/v2/chat (JSON)",
-      research: "/api/research (POST JSON)",
+      health: "GET /api/health",
+      chat_streaming: "POST /api/chat (SSE)",
+      chat_json: "POST /api/v2/chat (JSON)",
+      research: "POST /api/research",
+      openai_compatible: "POST /v1/chat/completions",
     },
+    docs: "https://github.com/abedhossainn/azure-ai-travel-agents",
   });
 });
 

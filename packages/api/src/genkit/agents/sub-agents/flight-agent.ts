@@ -59,6 +59,8 @@ export const flightAgent = ai.defineFlow(
     outputSchema: FlightAgentOutputSchema,
   },
   async (input) => {
+  console.log(`[FLIGHT AGENT] Input:`, JSON.stringify(input, null, 2));
+  
   const clientId = process.env.AMADEUS_CLIENT_ID || process.env.KEY;
       const clientSecret = process.env.AMADEUS_CLIENT_SECRET || process.env.SECRET;
 
@@ -113,19 +115,28 @@ export const flightAgent = ai.defineFlow(
       });
 
       const flightData = await withCache(cacheKey, CACHE_TTL.FLIGHTS, async () => {
-        const resp = await (amadeus as any).shopping.flightOffersSearch.get({
-          originLocationCode: input.origin,
-          destinationLocationCode: input.destination,
-          departureDate: input.departureDate,
-          returnDate: input.returnDate,
-          adults: input.adults,
-          currencyCode: currency,
-          max: 5,
-        });
-        return resp?.data ?? [];
+        try {
+          const resp = await (amadeus as any).shopping.flightOffersSearch.get({
+            originLocationCode: input.origin,
+            destinationLocationCode: input.destination,
+            departureDate: input.departureDate,
+            returnDate: input.returnDate,
+            adults: input.adults,
+            currencyCode: currency,
+            max: 5,
+          });
+          console.log(`[FLIGHT AGENT] Amadeus response: ${resp?.data?.length || 0} offers`);
+          return resp?.data ?? [];
+        } catch (err: any) {
+          console.error(`[FLIGHT AGENT] Amadeus API error:`, err.message, err.response?.statusCode);
+          return [];
+        }
       });
 
+      console.log(`[FLIGHT AGENT] Flight data length: ${flightData?.length || 0}`);
+
       if (!flightData || flightData.length === 0) {
+        console.log(`[FLIGHT AGENT] No flight data, returning empty`);
         return { 
           flights: [], 
           summary: `No flights found for ${input.origin} → ${input.destination} on ${input.departureDate}` 
