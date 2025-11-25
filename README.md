@@ -1,184 +1,239 @@
 # AI Travel Agent — Genkit + Gemini + Open WebUI
 
-A professional travel assistant powered by Google Genkit and Gemini with Amadeus API integration. The system provides:
-- Real-time travel preference analysis
-- Live flight and hotel research via Amadeus API
-- Destination recommendations with pros/cons
-- Personalized day-by-day itineraries
-- Streaming responses with transparent reasoning
+A professional travel assistant powered by Google Genkit orchestration and Gemini 2.5 Flash, featuring real-time Amadeus API integration and intelligent response caching.
+
+## Key Features
+
+- **Multi-agent orchestration** with parallel sub-agents (flights, hotels, activities, recommendations, itinerary)
+- **Intelligent intent routing** for optimized query handling
+- **Redis-powered caching** with tiered TTL strategies (up to 6x speedup)
+- **Real-time streaming** with transparent reasoning display
+- **Amadeus sandbox integration** for live flight, hotel, and activity data
+- **Open WebUI** with conversation management, login/sign-up, and customizable branding
 
 ## Architecture
 
+- **Orchestrator**: Google Genkit with master-agent pattern
+- **LLM Provider**: Google Gemini 2.5 Flash (≈8.8 AI calls/query)
 - **API**: Node.js + Express + Genkit (port 4000)
-- **Cache**: Redis 7 (port 6379) for Amadeus API response caching
-- **UI**: Open WebUI (Docker container, port 3000)
-- **LLM**: Google Gemini 2.5 Flash Lite
-- **Data**: Amadeus Test API for flights, hotels, and activities
+- **Cache**: Redis 7 (port 6379) with graduated TTL policies
+- **UI**: Open WebUI (port 3000) branded as "Travel Agent"
+- **External APIs**: Amadeus Sandbox for flights, hotels, activities, locations
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 22+ and npm
-- Docker and Docker Compose (for Redis and Open WebUI)
+- Docker and Docker Compose
 - API Keys:
-  - Google Gemini API Key (required)
-  - Amadeus API credentials (optional, for live data)
-  - Google Custom Search (optional, for web research)
+  - **Google Gemini API Key** (required) — Get from [Google AI Studio](https://aistudio.google.com/)
+  - **Amadeus API credentials** (optional, for live data) — Get from [Amadeus for Developers](https://developers.amadeus.com/)
 
-### 1. API Setup
+### 1. Clone and Configure
+
+```bash
+git clone https://github.com/abedhossainn/azure-ai-travel-agents.git
+cd azure-ai-travel-agents
+# Switch to the development branch
+git checkout ai-travel-agent-phase2
+```
+
+Create `packages/api/.env` with your API keys:
+
+```bash
+# Required
+GOOGLE_GENAI_API_KEY=your_gemini_api_key
+
+# Optional: Amadeus for live flight/hotel/activity data
+AMADEUS_CLIENT_ID=your_amadeus_client_id
+AMADEUS_CLIENT_SECRET=your_amadeus_client_secret
+
+# Optional: Redis (defaults to localhost:6379)
+REDIS_URL=redis://localhost:6379
+```
+
+### 2. Install Dependencies
 
 ```bash
 cd packages/api
 npm install
 ```
 
-Edit `packages/api/.env` with your credentials:
+### 3. Start All Services
 
-```ini
-# Required
-GEMINI_API_KEY=your_gemini_api_key
-model="gemini-2.5-flash-lite"
+**Option A: Docker Compose (Recommended)**
 
-# Optional: Amadeus for live flight/hotel data
-KEY=your_amadeus_client_id
-SECRET=your_amadeus_client_secret
-
-# Optional: Redis cache URL (defaults to localhost:6379)
-REDIS_URL=redis://localhost:6379
-
-# Optional: Google Custom Search
-GOOGLE_CUSTOM_SEARCH_API_KEY=your_google_api_key
-GOOGLE_CUSTOM_SEARCH_CX=your_search_engine_id
-```
-
-Start Redis cache (optional but recommended):
+Start Redis and Open WebUI:
 
 ```bash
+cd ../..
 docker-compose up -d
 ```
 
 Start the API server:
 
 ```bash
+cd packages/api
 npm start
 ```
 
-The API will be running at http://localhost:4000
+**Option B: Manual Start**
 
-### 2. Open WebUI Setup
-
-Start Open WebUI with Docker:
+Start Redis:
 
 ```bash
-./open-webui.sh start
+docker-compose up -d redis
 ```
 
-Or manually:
+Start the API:
 
 ```bash
-docker run -d -p 3000:8080 \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:4000/v1 \
-  -e OPENAI_API_KEY=sk-dummy \
-  --add-host=host.docker.internal:host-gateway \
-  -v open-webui:/app/backend/data \
-  --name open-webui \
-  --restart always \
-  ghcr.io/open-webui/open-webui:main
+cd packages/api
+npm start
 ```
 
-### 3. Access the Application
+### 4. Access the Application
 
-1. Open http://localhost:3000 in your browser
-2. Create a local account (first time only)
-3. Select the "travel-agent" model
-4. Start planning your trip!
+1. Open http://localhost:3000
+2. Sign up (create a local account)
+3. Select the **"travel-agent"** model from the dropdown
+4. Start chatting!
 
-## Managing Open WebUI
+**Example query:**
+```
+I want to visit Paris in April 2025 for 5 days. Budget is $3000. I love art and food.
+```
 
-Use the included management script:
+## Management Commands
+
+### Docker Compose
 
 ```bash
-./open-webui.sh start    # Start the container
-./open-webui.sh stop     # Stop the container
-./open-webui.sh restart  # Restart the container
-./open-webui.sh logs     # View logs
-./open-webui.sh status   # Check status
-./open-webui.sh remove   # Remove container (keeps data)
+# Start all services (Redis + Open WebUI)
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# Restart services
+docker-compose restart
 ```
 
 ## API Endpoints
 
-The API provides OpenAI-compatible endpoints for integration with various clients:
+### OpenAI-Compatible
 
-- **GET** `/v1/models` - List available models
-- **POST** `/v1/chat/completions` - Chat completions (streaming and non-streaming)
-- **GET** `/api/health` - Health check and configuration status (includes cache stats)
-- **POST** `/api/v2/chat` - Alternative JSON endpoint with structured sections
-- **POST** `/api/research` - Standalone research endpoint
-- **GET** `/api/cache/stats` - Cache performance statistics
-- **DELETE** `/api/cache/clear` - Clear cache (admin endpoint)
+- **GET** `/v1/models` — List available models
+- **POST** `/v1/chat/completions` — Chat completions (streaming and non-streaming)
 
-## Features
+### Custom Endpoints
 
-### Response Caching (Phase 1 ✅)
-- **Redis-powered** caching for Amadeus API responses
-- **30-50% token reduction** for typical workloads
-- **40-100x faster** responses for cached queries
-- Automatic graceful degradation if Redis unavailable
-- Smart TTL configuration:
-  - Location coordinates: 24 hours (static)
-  - Activities: 6 hours (semi-static)
-  - Hotels: 3 hours (moderate volatility)
-  - Flights: 1 hour (high volatility)
+- **GET** `/api/health` — Health check with cache status
+- **POST** `/api/v2/chat` — Structured JSON response with sections
+- **POST** `/api/research` — Standalone research (flights, hotels, activities)
+- **GET** `/api/cache/stats` — Cache performance metrics
+- **DELETE** `/api/cache/clear` — Admin cache invalidation
 
-See [CACHING.md](./CACHING.md) for detailed documentation.
+## System Features
 
-### Real-Time Streaming
-- Progressive response display
-- Live reasoning transparency
-- Step-by-step workflow visibility
-- Timing information for each phase
+### Multi-Agent Orchestration
+- **Master agent** coordinates specialized sub-agents (flights, hotels, activities, recommendations, itinerary, insights, cost)
+- **Parallel execution** of external-data sub-agents for minimal latency
+- **Intelligent intent routing** fast-paths simple queries vs. full orchestration
+- **Type-safe flows** with Zod schema validation for all inputs/outputs
 
-### Travel Planning Workflow
-1. **Preference Analysis** - Extracts destination, budget, dates, and travel style
-2. **Research** - Searches Amadeus API for flights, hotels, and activities
-3. **Recommendations** - Suggests 3 destinations with pros/cons analysis
-4. **Itinerary** - Creates detailed day-by-day schedule with transit tips
+### Response Caching
+- **Redis-powered** tiered caching for Amadeus API responses
+- **Up to 6x speedup** for flight searches (cold: 7.8s → warm: 1.3s)
+- **Graduated TTL policies** based on data volatility:
+  - Locations: 24h (static reference data)
+  - Activities: 6h (semi-static attractions)
+  - Hotels: 3h (moderate volatility)
+  - Flights: 1h (high volatility)
+- **Compound cache benefits**: Location + flights cache yields 6x total speedup
+- **Graceful degradation**: System continues without Redis if unavailable
 
 ### Amadeus Integration
-- Live flight pricing and availability
-- Hotel search with pricing
-- Activity recommendations with descriptions
+- **Live data** for flights, hotels, activities, and location resolution (city → IATA codes)
+- **Sandbox API** with best coverage for major cities (Paris, London, New York, Los Angeles)
+- **Neutral destination extraction** (no hard-coded fallbacks)
 - Falls back to AI estimates when data unavailable
 
-**Note**: Test API has limited coverage. Major cities (Paris, London, New York) work best. Production API required for comprehensive global coverage.
+### Real-Time Streaming
+- Progressive response display with reasoning transparency
+- Step-by-step workflow visibility and timing information
+- **≈8.8 AI calls per query** for comprehensive multi-agent orchestration
+
+### Open WebUI Features
+- Login/sign-up with local account system (no cloud dependency)
+- Conversation tabs for quick thread switching
+- Per-thread model selection and adjustable generation settings
+- Message edit and regenerate capabilities
+- Custom branding ("Travel Agent" heading)
 
 ## Development
 
-### Optional: Genkit Dev UI
+### Project Structure
 
-For debugging and testing flows:
+```
+packages/
+  api/
+    src/
+      index.ts                              # Express server + API routes
+      genkit/
+        ai.ts                               # Genkit + Gemini configuration
+        agents/
+          sub-agents/                       # Specialized agent flows
+            master-agent.ts                 # Master orchestrator
+            flight-agent.ts, hotel-agent.ts, etc.
+          formatters/
+            response-formatter.ts           # Unified output formatting
+      utils/
+        intent-router-v2.ts                 # Intelligent query routing
+        cache.ts                            # Redis cache utilities
+docker-compose.yml                          # Redis + Open WebUI services
+```
+
+### Genkit Dev UI (Optional)
+
+For debugging flows and inspecting traces:
 
 ```bash
 cd packages/api
 npm run genkit:dev
 ```
 
-Access the Genkit UI at http://localhost:4100
+Access at http://localhost:4100
 
-### Project Structure
+### Environment Variables
 
-```
-packages/
-  api/                 # Express API with Genkit orchestration
-    src/
-      index.ts         # API routes and streaming logic
-      genkit/
-        ai.ts          # Genkit configuration
-        agents/
-          flows.ts     # Individual AI flows
-OPEN-WEBUI.md         # Detailed Open WebUI setup guide
-open-webui.sh         # Management script for Docker container
-```
+| Variable | Required | Description | Default |
+|----------|----------|-------------|----------|
+| `GOOGLE_GENAI_API_KEY` | Yes | Gemini API key | — |
+| `AMADEUS_CLIENT_ID` | No | Amadeus client ID | (mock data) |
+| `AMADEUS_CLIENT_SECRET` | No | Amadeus client secret | (mock data) |
+| `REDIS_URL` | No | Redis connection string | `redis://localhost:6379` |
+| `AMADEUS_HOST` | No | Amadeus environment (`test` or `production`) | `test` |
+
+## Performance
+
+Based on benchmark analysis (see `local-reports/report.md`):
+
+- **Flight searches**: 6x faster with cache (7.8s → 1.3s)
+- **Activities lookup**: 9.1x faster with cache (2.2s → 0.24s)
+- **Location resolution**: ~2s saved per city name query (24h cache)
+- **AI calls**: ≈8.8 per query (multi-agent orchestration)
+- **Cost**: ~$0.00206 per query (Gemini pricing)
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions welcome! Please open an issue or submit a PR.
 

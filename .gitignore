@@ -332,6 +332,15 @@ __pycache__/
 *.pyc
 **/*.egg-info/
 
+# Python virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
@@ -424,12 +433,29 @@ dist
 docs/.vuepress/dist/
 docs/.vuepress/.cache/
 docs/.vuepress/.temp/
-CACHING.md
-OPEN-WEBUI.md
-websearch.txt
-open-webui.sh
-PROJECT_STATUS.md
-LICENSE.md
+
 # Genkit runtime artifacts - local only
 packages/api/.genkit/
-packages/api/package-lock.json
+
+# Local development and testing artifacts
+local-reports/
+*.log
+api.log
+websearch.txt
+benchmark-results.json
+concurrency-results.json
+.env.local
+
+# Project-specific files to ignore
+# Project-specific files to ignore
+script.txt
+PROJECT_STATUS.md
+open-webui.sh
+OPEN-WEBUI.md
+OLLAMA_SETUP.md
+CACHING.md
+packages/api/src/utils/ollama-model.ts
+packages/api/src/utils/request-queue.ts
+packages/api/src/utils/usage.ts
+packages/api/src/genkit/register-flows.ts
+packages/api/src/scripts/

@@ -17,6 +17,26 @@ services:
       timeout: 3s
       retries: 3
 
+  # Open WebUI - Travel Agent frontend
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: travel-agent-ui
+    ports:
+      - "3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://host.docker.internal:4000/v1
+      - OPENAI_API_KEY=sk-dummy
+      - WEBUI_NAME=Travel Agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - open-webui:/app/backend/data
+    restart: unless-stopped
+    depends_on:
+      - redis
+
 volumes:
   redis-data:
+    driver: local
+  open-webui:
     driver: local
