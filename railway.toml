@@ -3,14 +3,12 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "npm start --workspace=packages/api"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5
 
 [[services]]
 name = "api"
-buildCommand = "npm install && npm run build --workspace=packages/api"
-startCommand = "npm start --workspace=packages/api"
+startCommand = "node dist/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 port = 4000
@@ -19,3 +17,21 @@ port = 4000
 NODE_ENV = "production"
 LLM_PROVIDER = "gemini"
 model = "gemini-2.0-flash-lite"
+REDIS_URL = "redis://redis:6379"
+
+[[services]]
+name = "redis"
+image = "redis:7-alpine"
+port = 6379
+startCommand = "redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"
+
+[[services]]
+name = "open-webui"
+image = "ghcr.io/open-webui/open-webui:main"
+port = 8080
+
+[services.env]
+OPENAI_API_BASE_URL = "http://api:4000/v1"
+OPENAI_API_KEY = "sk-dummy"
+WEBUI_NAME = "Travel Agent"
+WEBUI_AUTH = "false"
