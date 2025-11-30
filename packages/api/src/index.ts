@@ -107,7 +107,10 @@ apiRouter.post("/chat", async (req, res) => {
       try {
         // Run the routed workflow (lean or full based on intent)
         const days = extractDays(message);
-        const result = await routeQuery(message, days);
+        const currency = (req.body?.currency || req.query?.currency || '').toString().trim() || undefined;
+        const locale = (req.headers['accept-language'] as string | undefined)?.split(',')[0]?.trim();
+        const originPref = (req.body?.origin || req.query?.origin || '').toString().trim() || undefined;
+        const result = await routeQuery(message, days, { currency, locale, origin: originPref });
         
         // result is now a formatted markdown string
         const content = result;
@@ -208,7 +211,10 @@ apiRouter.post("/v2/chat", async (req, res) => {
   }
   try {
     const days = extractDays(req.body.message);
-    const result = await routeQuery(req.body.message, days);
+    const currency = (req.body?.currency || req.query?.currency || '').toString().trim() || undefined;
+    const locale = (req.headers['accept-language'] as string | undefined)?.split(',')[0]?.trim();
+    const originPref = (req.body?.origin || req.query?.origin || '').toString().trim() || undefined;
+    const result = await routeQuery(req.body.message, days, { currency, locale, origin: originPref });
     return res.status(200).json({ 
       agent: "TravelMasterAgent", 
       content: result
@@ -328,7 +334,10 @@ openAIRouter.post("/chat/completions", async (req, res) => {
         const chunkSize = 80;
         const startTime = Date.now();
         // Use routeQuery which properly handles intent analysis and formatting
-        const formatted = await routeQuery(content, days);
+        const currency = (req.body?.currency || req.query?.currency || '').toString().trim() || undefined;
+        const locale = (req.headers['accept-language'] as string | undefined)?.split(',')[0]?.trim();
+        const originPref = (req.body?.origin || req.query?.origin || '').toString().trim() || undefined;
+        const formatted = await routeQuery(content, days, { currency, locale, origin: originPref });
         const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
         for (let i = 0; i < formatted.length; i += chunkSize) {
           writeChunk(formatted.slice(i, i + chunkSize));
@@ -360,7 +369,10 @@ openAIRouter.post("/chat/completions", async (req, res) => {
       }
     } else {
       // Non-streaming response
-      const formatted = await routeQuery(content, days);
+      const currency = (req.body?.currency || req.query?.currency || '').toString().trim() || undefined;
+      const locale = (req.headers['accept-language'] as string | undefined)?.split(',')[0]?.trim();
+      const originPref = (req.body?.origin || req.query?.origin || '').toString().trim() || undefined;
+      const formatted = await routeQuery(content, days, { currency, locale, origin: originPref });
       const now = Math.floor(Date.now() / 1000);
       return res.status(200).json({
         id: "chatcmpl_" + Math.random().toString(36).slice(2),

@@ -11,6 +11,8 @@ export const CACHE_TTL = {
   HOTELS: 3 * 60 * 60,           // 3 hours (prices change, but not too frequently)
   FLIGHTS: 1 * 60 * 60,          // 1 hour (prices more volatile)
   LOCATIONS: 24 * 60 * 60,       // 24 hours (coordinates are static)
+  EXTRACTS: 6 * 60 * 60,         // 6 hours (LLM context extraction; mostly stable)
+  RESPONSES: 30 * 60,            // 30 minutes (final formatted responses)
 } as const;
 
 /**

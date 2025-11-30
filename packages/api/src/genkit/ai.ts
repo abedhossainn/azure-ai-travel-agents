@@ -4,6 +4,9 @@ import { requestQueue } from "../utils/request-queue.js";
 import { incrementAiUsage, getAiUsage } from "../utils/usage.js";
 import { getOllamaConfig, callOllamaModel } from "../utils/ollama-model.js";
 
+// TEMPORARY: Disable Ollama for Gemini performance testing
+const FORCE_GEMINI = true;
+
 /**
  * Exponential backoff retry for 429 errors (recommended by Google Cloud docs)
  * https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429
@@ -55,7 +58,8 @@ const _origGenerate = (ai as any).generate;
   
   // Check if Ollama is configured
   const ollamaConfig = getOllamaConfig();
-  if (ollamaConfig.enabled) {
+  // Temporarily disable Ollama to use Gemini for performance testing
+  if (ollamaConfig.enabled && !FORCE_GEMINI) {
     console.log(`[OLLAMA] Intercepting ai.generate() call ${callNum} - routing to Ollama`);
     
     // Extract prompt/messages from Genkit args
@@ -219,7 +223,7 @@ export function getAiMetrics() {
  */
 export function getAiProvider() {
   const ollamaConfig = getOllamaConfig();
-  if (ollamaConfig.enabled) {
+  if (ollamaConfig.enabled && !FORCE_GEMINI) {
     return {
       provider: "ollama",
       model: ollamaConfig.model,

@@ -1,6 +1,7 @@
 import { ai } from "../genkit/ai.js";
 import { masterAgent } from "../genkit/agents/sub-agents/master-agent.js";
 import { formatFullResponse, formatLeanResponse } from "../genkit/agents/formatters/response-formatter.js";
+import { getCacheKey, getCached, setCached, withCache, CACHE_TTL } from "./cache.js";
 
 /**
  * Simplified Intent Router for Master Agent Architecture
@@ -74,6 +75,8 @@ export function analyzeIntent(query: string): IntentAnalysis {
  * This provides much better accuracy than regex patterns
  */
 export async function extractContext(query: string) {
+  // Cache only the raw LLM extraction; compute date defaults after retrieval
+  const extractKey = getCacheKey("extract", { q: query.trim().toLowerCase() });
   const prompt = `Extract travel planning information from this query. Return ONLY a JSON object, no other text.
 
 Query: "${query}"
@@ -96,16 +99,17 @@ Example output:
 {"origin":"New York","destination":"Paris","startDate":"2026-03-10","endDate":"2026-03-13","adults":2,"days":3}`;
 
   try {
-    const response = await ai.generate({
-      prompt,
-      config: { temperature: 0.1 }, // Low temperature for factual extraction
+    const extracted = await withCache(extractKey, CACHE_TTL.EXTRACTS, async () => {
+      const response = await ai.generate({
+        prompt,
+        config: { temperature: 0.1 },
+      });
+      const text = response.text || response.output || '';
+      const jsonMatch = text.match(/\{[^}]+\}/);
+      if (!jsonMatch) return null;
+      return JSON.parse(jsonMatch[0]);
     });
-
-    const text = response.text || response.output || '';
-    
-    // Try to extract JSON from the response (in case LLM adds extra text)
-    const jsonMatch = text.match(/\{[^}]+\}/);
-    if (!jsonMatch) {
+    if (!extracted) {
       console.warn('[EXTRACT] No JSON found in LLM response, using defaults');
       return {
         origin: undefined,
@@ -115,8 +119,6 @@ Example output:
         adults: 2,
       };
     }
-
-    const extracted = JSON.parse(jsonMatch[0]);
     
     // Post-process: calculate dates if needed
     if (!extracted.startDate && extracted.days) {
@@ -250,13 +252,27 @@ async function tryLeanResponse(query: string): Promise<string | null> {
 /**
  * Main routing function - all queries go through master agent
  */
-export async function routeQuery(query: string, days?: number): Promise<string> {
+export async function routeQuery(query: string, days?: number, opts?: { currency?: string; locale?: string; origin?: string; }): Promise<string> {
   console.log(`[ROUTE] Query: "${query}"`);
+  // Response-level cache: serve pre-formatted content for repeated queries
+  // Build base key and enrich after context extraction
+  const baseParams: Record<string, any> = { q: query.trim() };
+  if (typeof days === 'number') baseParams.days = days;
+  if (opts?.currency) baseParams.currency = opts.currency;
+  if (opts?.locale) baseParams.locale = opts.locale;
+  if (opts?.origin) baseParams.originPref = opts.origin;
+  const responseKey = getCacheKey("response", baseParams);
+  const cachedResponse = await getCached<string>(responseKey);
+  if (cachedResponse) {
+    console.log(`[ROUTE] Returning cached response`);
+    return cachedResponse;
+  }
   
   // 1. Try lean response for simple queries
   const lean = await tryLeanResponse(query);
   if (lean) {
     console.log(`[ROUTE] Returning lean response`);
+    await setCached(responseKey, lean, CACHE_TTL.RESPONSES);
     return lean;
   }
 
@@ -267,6 +283,16 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
   // 3. Extract context using LLM (async now)
   const context = await extractContext(query);
   console.log(`[ROUTE] Context:`, JSON.stringify(context));
+  const enrichedParams: Record<string, any> = { ...baseParams };
+  if (context?.origin) enrichedParams.origin = (context.origin as string).trim();
+  if (context?.destination) enrichedParams.destination = (context.destination as string).trim();
+  if (context?.adults) enrichedParams.adults = context.adults;
+  if (context?.startDate) enrichedParams.startDate = context.startDate;
+  if (context?.endDate) enrichedParams.endDate = context.endDate;
+  // Carry through optional currency/locale if provided
+  if (opts?.currency) enrichedParams.currency = opts.currency;
+  if (opts?.locale) enrichedParams.locale = opts.locale;
+  const enrichedResponseKey = getCacheKey("response", enrichedParams);
 
   // 4. Route to master agent with appropriate flags
   let result: any;
@@ -366,5 +392,7 @@ export async function routeQuery(query: string, days?: number): Promise<string> 
   }
 
   console.log(`[ROUTE] Formatting response with data:`, JSON.stringify(result).substring(0, 200));
-  return formatFullResponse(result as any);
+  const formatted = formatFullResponse(result as any);
+  await setCached(enrichedResponseKey, formatted, CACHE_TTL.RESPONSES);
+  return formatted;
 }
