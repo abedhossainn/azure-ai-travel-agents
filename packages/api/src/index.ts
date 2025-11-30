@@ -8,10 +8,8 @@ import express from "express";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { initRedis, getCacheStats, clearCachePattern } from "./utils/cache.js";
-import { getAiUsage } from "./utils/usage.js";
 import { getAiProvider } from "./genkit/ai.js";
 import { routeQuery } from "./utils/intent-router-v2.js";
-import { requestQueue } from "./utils/request-queue.js";
 
 // Register all Genkit flows for telemetry and dev UI traces
 import "./genkit/register-flows.js";
@@ -59,18 +57,12 @@ apiRouter.get("/health", async (req, res) => {
     process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
   const live = Boolean(googleKey && googleCx);
   const cacheStats = await getCacheStats();
-  const queueStats = requestQueue.getStats();
-  const aiUsage = await getAiUsage();
-  const dailyLimit = Number(process.env.AI_DAILY_LIMIT || 0) || null;
-  const monthlyLimit = Number(process.env.AI_MONTHLY_LIMIT || 0) || null;
   const aiProvider = getAiProvider();
   
   res.status(200).json({ 
     status: "OK", 
     webSearch: { live, keyConfigured: Boolean(googleKey), cxConfigured: Boolean(googleCx) },
     cache: cacheStats,
-    queue: queueStats,
-    aiUsage: { ...aiUsage, dailyLimit, monthlyLimit },
     aiProvider
   });
 });
