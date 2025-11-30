@@ -3,19 +3,15 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files
+# Copy all package files
 COPY package*.json ./
+COPY packages ./packages
 
-# Copy packages/api package files
-COPY packages/api/package*.json ./packages/api/
+# Install all dependencies including devDependencies
+# Use npm install (not ci) to work with workspaces properly
+RUN npm install
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
-
-# Copy source code
-COPY packages/api ./packages/api
-
-# Build TypeScript
+# Build TypeScript from packages/api
 WORKDIR /app/packages/api
 RUN npm run build
 
@@ -27,16 +23,12 @@ WORKDIR /app
 # Install dumb-init to handle signals properly
 RUN apk add --no-cache dumb-init
 
-# Copy root package files (needed for workspace resolution)
+# Copy root package files and built node_modules
 COPY package*.json ./
-
-# Copy only production dependencies
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
-
-# Copy built application (dist folder)
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
-COPY packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
 
 # Expose port
 EXPOSE 4000
