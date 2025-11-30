@@ -23,12 +23,16 @@ WORKDIR /app
 # Install dumb-init to handle signals properly
 RUN apk add --no-cache dumb-init
 
-# Copy root package files and built node_modules
+# Copy root package files and workspace structure
 COPY package*.json ./
+COPY packages/api/package*.json ./packages/api/
+
+# Copy node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/api/dist ./packages/api/dist
-COPY --from=builder /app/packages/api/package.json ./packages/api/
 COPY --from=builder /app/packages/api/node_modules ./packages/api/node_modules
+
+# Copy built application (dist folder only, not source)
+COPY --from=builder /app/packages/api/dist ./packages/api/dist
 
 # Expose port
 EXPOSE 4000
@@ -36,6 +40,6 @@ EXPOSE 4000
 # Use dumb-init to properly handle signals
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the API server
+# Start the API server directly with node (avoid workspace resolution issues)
 WORKDIR /app/packages/api
-CMD ["npm", "start"]
+CMD ["node", "dist/index.js"]
