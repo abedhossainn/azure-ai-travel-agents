@@ -14,7 +14,9 @@ RUN npm install
 
 # Build TypeScript from packages/api
 WORKDIR /app/packages/api
-RUN npm run build
+RUN npm run build && \
+    echo "=== Build complete, listing dist contents ===" && \
+    ls -laR dist/
 
 # Production stage
 FROM node:20-alpine
