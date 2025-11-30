@@ -12,5 +12,10 @@
       "args": ["mcp"],
       "cwd": "/home/abed/SENG/691 Agentic AI/Project/packages/api"
     },
+    "railway": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@railway/mcp-server"]
+    }
   }
 }
