@@ -1,0 +1,21 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "npm start --workspace=packages/api"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
+
+[[services]]
+name = "api"
+buildCommand = "npm install && npm run build --workspace=packages/api"
+startCommand = "npm start --workspace=packages/api"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+port = 4000
+
+[env]
+NODE_ENV = "production"
+LLM_PROVIDER = "gemini"
+model = "gemini-2.0-flash-lite"
