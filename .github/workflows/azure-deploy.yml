@@ -94,7 +94,10 @@ jobs:
               acrUsername="${{ secrets.AZURE_REGISTRY_USERNAME }}" \
               acrPassword="${{ secrets.AZURE_REGISTRY_PASSWORD }}" \
               apiImageName="${{ env.IMAGE_NAME }}" \
-              apiImageTag="latest"
+              apiImageTag="latest" \
+              googleGenaiApiKey="${{ secrets.GOOGLE_GENAI_API_KEY }}" \
+              amadeusClientId="${{ secrets.AMADEUS_CLIENT_ID }}" \
+              amadeusClientSecret="${{ secrets.AMADEUS_CLIENT_SECRET }}"
       
       - name: Get deployment outputs
         id: deployment_outputs

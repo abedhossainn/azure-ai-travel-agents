@@ -1,33 +1,49 @@
 // Bicep template for Azure Travel Agent deployment
 // Deploys: Container Instances (API, WebUI, Redis) using existing ACR
 
-@minLength(5)
-@maxLength(50)
+@description('Name of the Azure Container Registry')
 param acrName string = 'travelagentacr13864'
 
-@minLength(1)
-@maxLength(64)
+@description('Name for the container group')
 param containerGroupName string = 'travel-agent-container-group'
 
+@description('Location for all resources')
 param location string = resourceGroup().location
 
+@description('API image name in ACR')
 param apiImageName string = 'travel-agent-api'
 
+@description('API image tag')
 param apiImageTag string = 'latest'
 
+@description('ACR username for authentication')
+@secure()
 param acrUsername string
 
+@description('ACR password for authentication')
+@secure()
 param acrPassword string
 
+@description('DNS name label for the container group')
 param containerGroupDnsNameLabel string = 'travel-agent-${uniqueString(resourceGroup().id)}'
 
-// Get reference to existing Azure Container Registry
-resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' existing = {
-  name: acrName
-}
+@description('Google Gemini API Key')
+@secure()
+param googleGenaiApiKey string = ''
+
+@description('Amadeus Client ID')
+@secure()
+param amadeusClientId string = ''
+
+@description('Amadeus Client Secret')
+@secure()
+param amadeusClientSecret string = ''
+
+// ACR login server URL
+var acrLoginServer = '${acrName}.azurecr.io'
 
 // Create Container Instances - Container Group with all 3 services
-resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-preview' = {
+resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: containerGroupName
   location: location
   properties: {
@@ -38,8 +54,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
           image: 'redis:7-alpine'
           resources: {
             requests: {
-              cpu: 0.5
-              memoryInGb: 0.5
+              cpu: 1
+              memoryInGB: 1
             }
           }
           ports: [
@@ -62,11 +78,11 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
       {
         name: 'api'
         properties: {
-          image: '${acr.properties.loginServer}/${apiImageName}:${apiImageTag}'
+          image: '${acrLoginServer}/${apiImageName}:${apiImageTag}'
           resources: {
             requests: {
-              cpu: 1.0
-              memoryInGb: 1.5
+              cpu: 1
+              memoryInGB: 2
             }
           }
           ports: [
@@ -94,15 +110,15 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
             }
             {
               name: 'GOOGLE_GENAI_API_KEY'
-              value: ''
+              secureValue: googleGenaiApiKey
             }
             {
               name: 'AMADEUS_CLIENT_ID'
-              value: ''
+              secureValue: amadeusClientId
             }
             {
               name: 'AMADEUS_CLIENT_SECRET'
-              value: ''
+              secureValue: amadeusClientSecret
             }
           ]
         }
@@ -113,8 +129,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
           image: 'ghcr.io/open-webui/open-webui:main'
           resources: {
             requests: {
-              cpu: 0.5
-              memoryInGb: 0.5
+              cpu: 1
+              memoryInGB: 1
             }
           }
           ports: [
@@ -166,7 +182,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
     }
     imageRegistryCredentials: [
       {
-        server: acr.properties.loginServer
+        server: acrLoginServer
         username: acrUsername
         password: acrPassword
       }
@@ -175,8 +191,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
 }
 
 // Outputs
-output acrLoginServer string = acr.properties.loginServer
-output acrName string = acr.name
+output acrLoginServer string = acrLoginServer
 output containerGroupName string = containerGroup.name
 output containerGroupFqdn string = containerGroup.properties.ipAddress.fqdn
 output apiUrl string = 'http://${containerGroup.properties.ipAddress.fqdn}:4000'
