@@ -1,6 +1,6 @@
 [build]
 # Global defaults (used if a service doesn't override)
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 watchPatterns = ["**"]
 
@@ -15,7 +15,7 @@ port = 4000
 healthCheckPath = "/api/health"
 
 [services.genkit-api.build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [services.genkit-api.variables]
@@ -29,7 +29,7 @@ name = "Redis"
 port = 6379
 
 [services.redis.build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.redis"
 
 [services.redis.variables]
@@ -42,7 +42,7 @@ port = 8080
 
 # Choose ONE build source: Dockerfile.openwebui in repo OR official image
 [services.openwebui.build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.openwebui"
 
 [services.openwebui.variables]

@@ -1,8 +1,8 @@
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 import fs from 'fs';
 import path from 'path';
 
-let redisClient: RedisClientType | null = null;
+let redisClient: ReturnType<typeof createClient> | null = null;
 let isConnecting = false;
 
 // Cache TTLs (in seconds)
@@ -91,7 +91,7 @@ export async function initRedis(): Promise<void> {
 /**
  * Get Redis client (null if not connected)
  */
-export function getRedisClient(): RedisClientType | null {
+export function getRedisClient(): ReturnType<typeof createClient> | null {
   return redisClient;
 }
 
