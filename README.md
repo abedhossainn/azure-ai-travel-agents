@@ -2,6 +2,8 @@
 
 A professional travel assistant powered by Google Genkit orchestration and Gemini 2.5 Flash, featuring real-time Amadeus API integration and intelligent response caching.
 
+**Now deployed on Azure Container Instances with automated CI/CD pipeline!** 🚀
+
 ## Key Features
 
 - **Multi-agent orchestration** with parallel sub-agents (flights, hotels, activities, recommendations, itinerary)
@@ -10,6 +12,7 @@ A professional travel assistant powered by Google Genkit orchestration and Gemin
 - **Real-time streaming** with transparent reasoning display
 - **Amadeus sandbox integration** for live flight, hotel, and activity data
 - **Open WebUI** with conversation management, login/sign-up, and customizable branding
+- **Azure CI/CD Deployment** with automated build, push, and container orchestration
 
 ## Architecture
 
@@ -17,10 +20,12 @@ A professional travel assistant powered by Google Genkit orchestration and Gemin
 - **LLM Provider**: Google Gemini 2.5 Flash (≈8.8 AI calls/query)
 - **API**: Node.js + Express + Genkit (port 4000)
 - **Cache**: Redis 7 (port 6379) with graduated TTL policies
-- **UI**: Open WebUI (port 3000) branded as "Travel Agent"
+- **UI**: Open WebUI (port 8080) branded as "Travel Agent"
+- **Deployment**: Azure Container Instances (ACI) on westus region
+- **CI/CD**: GitHub Actions with automated build, push to ACR, and Bicep deployment
 - **External APIs**: Amadeus Sandbox for flights, hotels, activities, locations
 
-## Quick Start
+## Quick Start — Local Development
 
 ### Prerequisites
 
@@ -105,9 +110,86 @@ npm start
 I want to visit Paris in April 2025 for 5 days. Budget is $3000. I love art and food.
 ```
 
+## Azure Deployment
+
+### Prerequisites
+
+- Azure subscription with westus region enabled
+- Azure CLI installed
+- GitHub repository access
+- Docker Hub or container registry access
+
+### Deployment Architecture
+
+```
+GitHub Workflow
+    ↓
+Build TypeScript (packages/api)
+    ↓
+Build & Push Docker Image to ACR
+    ↓
+Deploy Bicep Template (Container Instances)
+    ↓
+Live Application on Azure
+```
+
+### Configured Azure Resources
+
+- **Container Registry (ACR)**: `travelagentacr13864.azurecr.io`
+  - redis:7-alpine
+  - open-webui:main
+  - travel-agent-api:latest
+
+- **Container Group**: `travel-agent-container-group`
+  - 3 containers (API, Redis, WebUI)
+  - Public IP with FQDN
+  - Resource group: `AzureAiTravelAgentWest`
+  - Region: `westus`
+
+### CI/CD Pipeline
+
+The repository includes automated GitHub Actions workflow (`.github/workflows/azure-deploy.yml`) that:
+
+1. **Builds** TypeScript code
+2. **Creates** Docker image from Dockerfile
+3. **Pushes** image to Azure Container Registry (ACR)
+4. **Deploys** Bicep infrastructure as code
+5. **Outputs** access URLs
+
+#### Required GitHub Secrets
+
+Configure these in your GitHub repository settings:
+
+```
+AZURE_CREDENTIALS          # Service Principal credentials (JSON)
+AZURE_REGISTRY_LOGIN_SERVER # ACR login server URL
+AZURE_REGISTRY_USERNAME    # ACR username
+AZURE_REGISTRY_PASSWORD    # ACR password
+GOOGLE_GENAI_API_KEY       # Gemini API key
+AMADEUS_CLIENT_ID          # Amadeus client ID
+AMADEUS_CLIENT_SECRET      # Amadeus client secret
+```
+
+#### How to Deploy
+
+1. Push to `ai-travel-agent-phase2` branch
+2. GitHub Actions workflow automatically triggers
+3. Deployment completes in ~5-10 minutes
+4. Access your deployed application via the output URLs
+
+### Accessing Deployed Application
+
+After successful deployment, access via:
+
+- **Frontend**: `http://[FQDN]:8080`
+- **API**: `http://[FQDN]:4000`
+- **Health Check**: `http://[FQDN]:4000/api/health`
+
+The FQDN is provided in the GitHub Actions workflow output.
+
 ## Management Commands
 
-### Docker Compose
+### Docker Compose (Local)
 
 ```bash
 # Start all services (Redis + Open WebUI)
@@ -121,6 +203,22 @@ docker-compose logs -f
 
 # Restart services
 docker-compose restart
+```
+
+### Azure Management
+
+```bash
+# View container status
+az container show --resource-group AzureAiTravelAgentWest \
+  --name travel-agent-container-group
+
+# View container logs
+az container logs --resource-group AzureAiTravelAgentWest \
+  --name travel-agent-container-group --container-name api
+
+# Restart container group
+az container restart --resource-group AzureAiTravelAgentWest \
+  --name travel-agent-container-group
 ```
 
 ## API Endpoints
@@ -195,7 +293,13 @@ packages/
       utils/
         intent-router-v2.ts                 # Intelligent query routing
         cache.ts                            # Redis cache utilities
+infra/
+  main.bicep                                # Azure infrastructure as code
+.github/
+  workflows/
+    azure-deploy.yml                        # CI/CD pipeline
 docker-compose.yml                          # Redis + Open WebUI services
+Dockerfile                                  # Multi-stage build for API
 ```
 
 ### Genkit Dev UI (Optional)
@@ -213,15 +317,18 @@ Access at http://localhost:4100
 
 | Variable | Required | Description | Default |
 |----------|----------|-------------|----------|
-| `GOOGLE_GENAI_API_KEY` | Yes | Gemini API key | — |
-| `AMADEUS_CLIENT_ID` | No | Amadeus client ID | (mock data) |
-| `AMADEUS_CLIENT_SECRET` | No | Amadeus client secret | (mock data) |
-| `REDIS_URL` | No | Redis connection string | `redis://localhost:6379` |
+| `GOOGLE_GENAI_API_KEY` | **Yes** | Google Gemini API key for LLM orchestration | — |
+| `AMADEUS_CLIENT_ID` | **Yes** | Amadeus API client ID for flights, hotels, activities | — |
+| `AMADEUS_CLIENT_SECRET` | **Yes** | Amadeus API client secret for authentication | — |
 | `AMADEUS_HOST` | No | Amadeus environment (`test` or `production`) | `test` |
+| `REDIS_URL` | No | Redis connection string for caching | `redis://localhost:6379` |
+| `model` | No | Gemini model identifier | `gemini-2.0-flash-lite` |
+| `NODE_ENV` | No | Node.js environment mode | `production` |
+| `PORT` | No | API server port | `4000` |
 
-## Performance
+**Note:** Without `GOOGLE_GENAI_API_KEY`, the LLM orchestration fails. Without `AMADEUS_CLIENT_ID` and `AMADEUS_CLIENT_SECRET`, travel data queries return mock data only. Redis is optional but highly recommended for performance (enables response caching).
 
-Based on benchmark analysis (see `local-reports/report.md`):
+## Performance Improvements
 
 - **Flight searches**: 6x faster with cache (7.8s → 1.3s)
 - **Activities lookup**: 9.1x faster with cache (2.2s → 0.24s)
@@ -236,4 +343,3 @@ MIT
 ## Contributing
 
 Contributions welcome! Please open an issue or submit a PR.
-
