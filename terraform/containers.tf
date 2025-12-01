@@ -37,7 +37,7 @@ resource "oci_container_instances_container_instance" "api" {
       "NODE_ENV"       = "production"
       "LLM_PROVIDER"   = "gemini"
       "MODEL"          = "gemini-2.0-flash-lite"
-      "REDIS_URL"      = "redis://${oci_ocache_cluster.redis_cluster.endpoint}:6379"
+      "REDIS_URL"      = "redis://redis:6379"  # Configure external Redis or disable caching
       "AMADEUS_HOST"   = "test"
       # Vault secret OCIDs - container will fetch values at runtime
       "OCI_VAULT_ID"   = var.vault_id
@@ -72,8 +72,7 @@ resource "oci_container_instances_container_instance" "api" {
   freeform_tags = local.common_tags
 
   depends_on = [
-    oci_core_subnet.public_subnet,
-    oci_ocache_cluster.redis_cluster
+    oci_core_subnet.public_subnet
   ]
 }
 

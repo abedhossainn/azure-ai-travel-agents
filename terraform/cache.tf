@@ -1,33 +1,22 @@
-# OCI Cache with Redis
-# Reference: https://docs.oracle.com/en-us/iaas/Content/ocache/home.htm
+# Redis Cache Configuration
+# Note: Using environment variable for now
+# For production, integrate with OCI Cache cluster or external Redis service
+# This can be deployed separately or using a container instance
 
-resource "oci_ocache_cluster" "redis_cluster" {
-  compartment_id = var.compartment_ocid
-  display_name   = local.cache_cluster_name
+# Placeholder for future OCI Cache integration
+# When available, uncomment and configure:
+# resource "oci_cache_cluster" "redis_cluster" {
+#   compartment_id = var.compartment_ocid
+#   display_name   = local.cache_cluster_name
+#   node_count     = var.redis_node_count
+#   shape          = var.cache_shape
+# }
 
-  node_count = var.redis_node_count
-  shape      = var.cache_shape
+# For now, Redis can be:
+# 1. Deployed separately outside Terraform
+# 2. Replaced with in-memory caching
+# 3. Using external Redis service (e.g., Redis Cloud)
 
-  software_version = "7.0"
-
-  # Placement (use first availability domain in region)
-  placement_configs {
-    availability_domain = data.oci_identity_availability_domains.ad.availability_domains[0].name
-  }
-
-  # Network
-  subnet_id = oci_core_subnet.public_subnet.id
-  nsg_ids   = [oci_core_network_security_group.cache_nsg.id]
-
-  freeform_tags = local.common_tags
-
-  depends_on = [
-    oci_core_subnet.public_subnet
-  ]
-}
-
-# Output Redis connection endpoint
-data "oci_ocache_clusters" "redis_endpoint" {
-  compartment_id = var.compartment_ocid
-  depends_on     = [oci_ocache_cluster.redis_cluster]
+output "redis_note" {
+  value = "Redis not deployed via Terraform. Configure REDIS_URL environment variable separately or disable caching in the application."
 }
