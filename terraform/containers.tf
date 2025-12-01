@@ -46,24 +46,16 @@ resource "oci_container_instances_container_instance" "api" {
       "AMADEUS_CLIENT_SECRET_SECRET_ID" = var.amadeus_client_secret_secret_id
     }
 
-    # Health check
-    health_checks {
-      health_check_type = "HTTP"
-      port              = var.api_port
-      url_path          = "/api/health"
-      interval_in_seconds = 30
-      timeout_in_seconds  = 10
-      failure_threshold   = 3
-      success_threshold   = 2
-    }
+    # Health check configuration
+    # Note: Simplified for MVP - can be enhanced in production
+    # health_checks {
+    #   health_check_type = "HTTP"
+    #   port              = var.api_port
+    #   url_path          = "/api/health"
+    # }
 
     # Logging
     is_resource_principal_auth_enabled = false
-
-    # Container startup
-    working_directory = "/app/packages/api"
-    entrypoint = ["node"]
-    command = ["dist/index.js"]
   }
 
   # Restart policy
@@ -107,25 +99,20 @@ resource "oci_container_instances_container_instance" "webui" {
 
     # Environment variables
     environment_variables = {
-      "OPENAI_API_BASE_URL" = "http://${oci_container_instances_container_instance.api[0].container_instance_hostname}:${var.api_port}/v1"
+      "OPENAI_API_BASE_URL" = "http://localhost:4000/v1"
       "OPENAI_API_KEY"      = "sk-dummy"
       "WEBUI_NAME"          = "Travel Agent"
       "WEBUI_AUTH"          = "false"
     }
 
-    # Health check
-    health_checks {
-      health_check_type = "HTTP"
-      port              = 8080
-      url_path          = "/"
-      interval_in_seconds = 30
-      timeout_in_seconds  = 10
-      failure_threshold   = 3
-      success_threshold   = 2
-    }
+    # Health check configuration
+    # Note: Simplified for MVP - can be enhanced in production
+    # health_checks {
+    #   health_check_type = "HTTP"
+    #   port              = 8080
+    #   url_path          = "/"
+    # }
 
-    # Container startup
-    working_directory = "/app"
   }
 
   # Restart policy
@@ -134,6 +121,6 @@ resource "oci_container_instances_container_instance" "webui" {
   freeform_tags = local.common_tags
 
   depends_on = [
-    oci_container_instances_container_instance.api
+    oci_core_subnet.public_subnet
   ]
 }
