@@ -51,7 +51,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'redis'
         properties: {
-          image: 'redis:7-alpine'
+          image: '${acrLoginServer}/redis:7-alpine'
           resources: {
             requests: {
               cpu: 1
@@ -73,6 +73,16 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             '--maxmemory-policy'
             'allkeys-lru'
           ]
+          livenessProbe: {
+            exec: {
+              command: [
+                'redis-cli'
+                'ping'
+              ]
+            }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          }
         }
       }
       {
@@ -126,7 +136,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'ui'
         properties: {
-          image: 'ghcr.io/open-webui/open-webui:main'
+          image: '${acrLoginServer}/open-webui:main'
           resources: {
             requests: {
               cpu: 1
