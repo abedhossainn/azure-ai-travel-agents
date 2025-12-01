@@ -3,9 +3,8 @@
 
 FROM redis:7-alpine
 
-# Create data directory for persistence
-RUN mkdir -p /data && chown -R redis:redis /data
-VOLUME ["/data"]
+# Data persistence via Railway volumes (mount /data in Railway dashboard)
+# No VOLUME directive - Railway handles volume mounting
 
 # Optional: basic config tuned for cache usage
 # - appendonly yes: durability across restarts

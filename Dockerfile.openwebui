@@ -1,12 +1,8 @@
-# Dockerfile for OpenWebUI service
-# This service provides the web UI frontend for the travel agents API
+# Official OpenWebUI image (lightweight, no Ollama bundled)
 FROM ghcr.io/open-webui/open-webui:main
 
-# Health check to verify service is running
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
-
-# OpenWebUI will use environment variables for configuration
-# OPENAI_API_BASE_URL: API endpoint (set via Railway variables)
-# OPENAI_API_KEY: dummy key
-# WEBUI_AUTH: set to false for public access
+# Listens on port 8080 by default
+# Configure via Railway environment variables:
+# - OPENAI_API_BASE_URL: http://genkit-api.railway.internal:4000/v1
+# - OPENAI_API_KEY: dummy-key
+# - WEBUI_AUTH: false (for public access)
