@@ -91,8 +91,6 @@ jobs:
             --template-file infra/main.bicep \
             --parameters \
               acrName="${{ env.ACR_NAME }}" \
-              keyVaultName="AITravelAgent" \
-              keyVaultResourceGroup="AzureAiTravelAgent" \
               apiImageName="${{ env.IMAGE_NAME }}" \
               apiImageTag="latest"
       

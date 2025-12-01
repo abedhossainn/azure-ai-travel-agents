@@ -1,5 +1,5 @@
 // Bicep template for Azure Travel Agent deployment
-// Deploys: Container Instances (API, WebUI, Redis) using existing ACR and Key Vault
+// Deploys: Container Instances (API, WebUI, Redis) using existing ACR
 
 @minLength(5)
 @maxLength(50)
@@ -11,42 +11,25 @@ param containerGroupName string = 'travel-agent-container-group'
 
 param location string = resourceGroup().location
 
-param keyVaultName string = 'AITravelAgent'
-
-param keyVaultResourceGroup string = 'AzureAiTravelAgent'
-
 param apiImageName string = 'travel-agent-api'
 
 param apiImageTag string = 'latest'
 
 param containerGroupDnsNameLabel string = 'travel-agent-${uniqueString(resourceGroup().id)}'
 
-var redisContainerName = 'redis'
-var apiContainerName = 'api'
-var uiContainerName = 'ui'
-
 // Get reference to existing Azure Container Registry
 resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' existing = {
   name: acrName
-}
-
-// Get reference to Key Vault (assumes it exists)
-resource keyVault 'Microsoft.KeyVault/vaults@2024-04-01-preview' existing = {
-  name: keyVaultName
-  scope: resourceGroup(keyVaultResourceGroup)
 }
 
 // Create Container Instances - Container Group with all 3 services
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-preview' = {
   name: containerGroupName
   location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
   properties: {
     containers: [
       {
-        name: redisContainerName
+        name: 'redis'
         properties: {
           image: 'redis:7-alpine'
           resources: {
@@ -70,12 +53,10 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
             '--maxmemory-policy'
             'allkeys-lru'
           ]
-          environmentVariables: []
-          volumeMounts: []
         }
       }
       {
-        name: apiContainerName
+        name: 'api'
         properties: {
           image: '${acr.properties.loginServer}/${apiImageName}:${apiImageTag}'
           resources: {
@@ -109,22 +90,21 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
             }
             {
               name: 'GOOGLE_GENAI_API_KEY'
-              secureValue: keyVault.getSecret('GOOGLE-GENAI-API-KEY')
+              value: ''
             }
             {
               name: 'AMADEUS_CLIENT_ID'
-              secureValue: keyVault.getSecret('AMADEUS-CLIENT-ID')
+              value: ''
             }
             {
               name: 'AMADEUS_CLIENT_SECRET'
-              secureValue: keyVault.getSecret('AMADEUS-CLIENT-SECRET')
+              value: ''
             }
           ]
-          volumeMounts: []
         }
       }
       {
-        name: uiContainerName
+        name: 'ui'
         properties: {
           image: 'ghcr.io/open-webui/open-webui:main'
           resources: {
@@ -161,7 +141,6 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
               value: 'false'
             }
           ]
-          volumeMounts: []
         }
       }
     ]
@@ -186,26 +165,6 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
         server: acr.properties.loginServer
         username: acr.listCredentials().username
         password: acr.listCredentials().passwords[0].value
-      }
-    ]
-  }
-}
-
-// Grant container group managed identity access to Key Vault
-resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2024-04-01-preview' = {
-  name: 'add'
-  parent: keyVault
-  properties: {
-    accessPolicies: [
-      {
-        tenantId: subscription().tenantId
-        objectId: containerGroup.identity.principalId
-        permissions: {
-          secrets: [
-            'get'
-            'list'
-          ]
-        }
       }
     ]
   }
