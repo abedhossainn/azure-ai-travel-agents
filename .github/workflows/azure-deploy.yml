@@ -91,6 +91,8 @@ jobs:
             --template-file infra/main.bicep \
             --parameters \
               acrName="${{ env.ACR_NAME }}" \
+              acrUsername="${{ secrets.AZURE_REGISTRY_USERNAME }}" \
+              acrPassword="${{ secrets.AZURE_REGISTRY_PASSWORD }}" \
               apiImageName="${{ env.IMAGE_NAME }}" \
               apiImageTag="latest"
       

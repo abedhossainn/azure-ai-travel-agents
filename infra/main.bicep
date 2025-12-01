@@ -15,6 +15,10 @@ param apiImageName string = 'travel-agent-api'
 
 param apiImageTag string = 'latest'
 
+param acrUsername string
+
+param acrPassword string
+
 param containerGroupDnsNameLabel string = 'travel-agent-${uniqueString(resourceGroup().id)}'
 
 // Get reference to existing Azure Container Registry
@@ -163,8 +167,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-12-01-
     imageRegistryCredentials: [
       {
         server: acr.properties.loginServer
-        username: acr.listCredentials().username
-        password: acr.listCredentials().passwords[0].value
+        username: acrUsername
+        password: acrPassword
       }
     ]
   }
