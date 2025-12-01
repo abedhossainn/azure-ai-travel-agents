@@ -128,13 +128,3 @@ jobs:
           echo "  1. Wait 1-2 minutes for containers to start"
           echo "  2. Access the UI: ${{ steps.deployment_outputs.outputs.ui_url }}"
           echo "  3. Check API health: ${{ steps.deployment_outputs.outputs.api_url }}/api/health"
-
-  azure-logout:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: always()
-    
-    steps:
-      - name: Azure logout
-        uses: azure/logout@v2
-        if: always()
