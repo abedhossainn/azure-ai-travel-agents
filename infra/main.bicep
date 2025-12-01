@@ -29,15 +29,18 @@ param containerGroupDnsNameLabel string = 'travel-agent-${uniqueString(resourceG
 
 @description('Google Gemini API Key')
 @secure()
-param googleGenaiApiKey string = ''
+@minLength(1)
+param googleGenaiApiKey string
 
 @description('Amadeus Client ID')
 @secure()
-param amadeusClientId string = ''
+@minLength(1)
+param amadeusClientId string
 
 @description('Amadeus Client Secret')
 @secure()
-param amadeusClientSecret string = ''
+@minLength(1)
+param amadeusClientSecret string
 
 // ACR login server URL
 var acrLoginServer = '${acrName}.azurecr.io'
