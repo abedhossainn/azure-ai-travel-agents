@@ -34,41 +34,47 @@ export async function initRedis(): Promise<void> {
     urlsToTry.push('redis://localhost:6379');
 
     let lastError: any = null;
-    for (const url of urlsToTry) {
-      try {
-        redisClient = createClient({
-          url,
-          socket: {
-            reconnectStrategy: (retries) => {
-              if (retries > 20) {
-                console.error('Redis: Max reconnection attempts reached');
-                return new Error('Redis unavailable');
-              }
-              // Exponential backoff up to 5s
-              return Math.min(200 + retries * 300, 5000);
+    const attemptConnect = async (): Promise<boolean> => {
+      for (const url of urlsToTry) {
+        try {
+          const client = createClient({
+            url,
+            socket: {
+              reconnectStrategy: (retries) => {
+                if (retries > 30) {
+                  console.error('Redis: Max reconnection attempts reached');
+                  return new Error('Redis unavailable');
+                }
+                return Math.min(200 + retries * 300, 5000);
+              },
             },
-          },
-        });
+          });
 
-        redisClient.on('error', () => {});
-        redisClient.on('connect', () => {
-          console.log(`Redis: connecting to ${url}`);
-        });
-        redisClient.on('ready', () => {
-          console.log('Redis: ready');
-        });
+          client.on('error', () => {});
+          client.on('connect', () => {
+            console.log(`Redis: connecting to ${url}`);
+          });
+          client.on('ready', () => {
+            console.log('Redis: ready');
+          });
 
-        // Small initial delay can help in multi-service boots
-        await new Promise((r) => setTimeout(r, 300));
-        await redisClient.connect();
-        // Connected successfully
-        lastError = null;
-        break;
-      } catch (err: any) {
-        lastError = err;
-        // Try next URL
-        redisClient = null;
+          await new Promise((r) => setTimeout(r, 500));
+          await client.connect();
+          redisClient = client;
+          return true;
+        } catch (err: any) {
+          lastError = err;
+        }
       }
+      return false;
+    };
+
+    // Try up to 10 times with backoff
+    for (let i = 0; i < 10; i++) {
+      const ok = await attemptConnect();
+      if (ok) break;
+      const delay = Math.min(1000 + i * 500, 5000);
+      await new Promise((r) => setTimeout(r, delay));
     }
 
     if (!redisClient) {
