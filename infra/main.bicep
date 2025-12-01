@@ -1,8 +1,8 @@
 // Bicep template for Azure Travel Agent deployment
-// Deploys: Azure Container Registry, Container Instances (API, WebUI, Redis), and Key Vault integration
+// Deploys: Container Instances (API, WebUI, Redis) using existing ACR and Key Vault
 
-@minLength(3)
-@maxLength(24)
+@minLength(5)
+@maxLength(50)
 param acrName string = 'travelagentacr13864'
 
 @minLength(1)
@@ -25,30 +25,9 @@ var redisContainerName = 'redis'
 var apiContainerName = 'api'
 var uiContainerName = 'ui'
 
-// Create Azure Container Registry
-resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
+// Get reference to existing Azure Container Registry
+resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' existing = {
   name: acrName
-  location: location
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    adminUserEnabled: true
-    publicNetworkAccess: 'Enabled'
-    policies: {
-      quarantinePolicy: {
-        status: 'disabled'
-      }
-      trustPolicy: {
-        type: 'Notary'
-        status: 'disabled'
-      }
-      retentionPolicy: {
-        days: 30
-        status: 'enabled'
-      }
-    }
-  }
 }
 
 // Get reference to Key Vault (assumes it exists)
