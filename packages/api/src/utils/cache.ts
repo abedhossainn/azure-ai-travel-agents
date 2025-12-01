@@ -24,34 +24,56 @@ export async function initRedis(): Promise<void> {
   isConnecting = true;
   
   try {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    
-    redisClient = createClient({
-      url: redisUrl,
-      socket: {
-        reconnectStrategy: (retries) => {
-          if (retries > 10) {
-            console.error('Redis: Max reconnection attempts reached');
-            return new Error('Redis unavailable');
-          }
-          return Math.min(retries * 100, 3000);
-        }
+    const urlsToTry: string[] = [];
+    const envUrl = process.env.REDIS_URL;
+    if (envUrl) urlsToTry.push(envUrl);
+    // Common Railway internal hostnames
+    urlsToTry.push('redis://redis:6379');
+    urlsToTry.push('redis://redis.railway.internal:6379');
+    // Local fallback
+    urlsToTry.push('redis://localhost:6379');
+
+    let lastError: any = null;
+    for (const url of urlsToTry) {
+      try {
+        redisClient = createClient({
+          url,
+          socket: {
+            reconnectStrategy: (retries) => {
+              if (retries > 20) {
+                console.error('Redis: Max reconnection attempts reached');
+                return new Error('Redis unavailable');
+              }
+              // Exponential backoff up to 5s
+              return Math.min(200 + retries * 300, 5000);
+            },
+          },
+        });
+
+        redisClient.on('error', () => {});
+        redisClient.on('connect', () => {
+          console.log(`Redis: connecting to ${url}`);
+        });
+        redisClient.on('ready', () => {
+          console.log('Redis: ready');
+        });
+
+        // Small initial delay can help in multi-service boots
+        await new Promise((r) => setTimeout(r, 300));
+        await redisClient.connect();
+        // Connected successfully
+        lastError = null;
+        break;
+      } catch (err: any) {
+        lastError = err;
+        // Try next URL
+        redisClient = null;
       }
-    });
+    }
 
-    redisClient.on('error', (err) => {
-      // Redis connection error
-    });
-
-    redisClient.on('connect', () => {
-      // Redis connected
-    });
-
-    redisClient.on('ready', () => {
-      // Redis ready
-    });
-
-    await redisClient.connect();
+    if (!redisClient) {
+      throw lastError || new Error('Unable to connect to Redis');
+    }
   } catch (error: any) {
     // Failed to initialize Redis - cache disabled
     redisClient = null;
