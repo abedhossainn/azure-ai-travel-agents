@@ -1,0 +1,82 @@
+# Terraform Variables Template for Oracle Resource Manager
+# Copy this file to terraform.tfvars and populate with your OCI details
+# DO NOT commit terraform.tfvars to version control (it may contain secrets)
+
+# ===== OCI Authentication =====
+# These should be obtained from your OCI Console
+tenancy_ocid       = "ocid1.tenancy.oc1..aaaaaaaa..."
+user_ocid          = "ocid1.user.oc1..aaaaaaaa..."
+fingerprint        = "00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
+private_key_path   = "/path/to/oci_api_key.pem"
+
+# ===== OCI Region =====
+region      = "us-ashburn-1"
+home_region = "us-ashburn-1"
+
+# ===== Compartment =====
+# OCID of the compartment where all resources will be created
+compartment_ocid = "ocid1.compartment.oc1..aaaaaaaa..."
+
+# ===== Project Labels =====
+project_name = "travel-agent"
+environment  = "prod"
+
+# ===== Networking =====
+vcn_cidr    = "10.0.0.0/16"
+subnet_cidr = "10.0.1.0/24"
+
+# ===== Container Images (OCI Container Registry - OCIR) =====
+# Format: <region_code>.ocir.io/<namespace>/<repository>/<image>:<tag>
+# Region codes: iad=Ashburn, phx=Phoenix, etc.
+ocir_region_code = "iad"
+ocir_namespace   = "your_tenancy_namespace"  # Run: oci os ns get
+api_image_uri    = "iad.ocir.io/your_namespace/travel-agent/api:latest"
+webui_image_uri  = "ghcr.io/open-webui/open-webui:main"  # Public image
+
+# ===== OCI Vault Secrets =====
+# These secret OCIDs must be created in OCI Vault first
+vault_id                          = "ocid1.vault.oc1..aaaaaaaa..."
+google_genai_api_key_secret_id    = "ocid1.vaultsecret.oc1..aaaaaaaa..."
+amadeus_client_id_secret_id       = "ocid1.vaultsecret.oc1..aaaaaaaa..."
+amadeus_client_secret_secret_id   = "ocid1.vaultsecret.oc1..aaaaaaaa..."
+
+# ===== Container Configuration =====
+api_port              = 4000
+webui_port            = 8080
+api_container_memory  = 1024    # MB
+api_container_cpu     = "1"     # OCPUs
+webui_container_memory = 512    # MB
+webui_container_cpu   = "0.5"   # OCPUs
+
+# ===== Redis/Cache Configuration =====
+cache_shape  = "redis.standalone.general.x7.1gb"  # or redis.cluster.general.x7.1gb
+redis_node_count = 1
+
+# ===== Load Balancer Configuration =====
+load_balancer_shape      = "flexible"
+load_balancer_bandwidth_mbps = 10
+
+# ===== DNS Configuration (optional) =====
+# Leave empty to skip DNS configuration
+dns_zone_name = ""              # e.g., "example.com"
+domain_name   = ""              # e.g., "travel-agent.example.com"
+
+# ===== SSL/TLS Configuration =====
+# If domain_name is set, choose one of the following:
+# - use_self_signed_cert = true  (self-signed, quick setup)
+# - use_self_signed_cert = false (requires cert.pem and key.pem in terraform/ folder)
+certificate_display_name         = "travel-agent-cert"
+certificate_subject_common_name  = ""  # e.g., "travel-agent.example.com"
+use_self_signed_cert             = false
+
+# ===== Container Instances (fixed count, no autoscaling) =====
+api_instance_count   = 1
+webui_instance_count = 1
+
+# ===== Tags =====
+tags = {
+  "Terraform"   = "true"
+  "Project"     = "travel-agent"
+  "ManagedBy"   = "ResourceManager"
+  "CostCenter"  = "engineering"
+}

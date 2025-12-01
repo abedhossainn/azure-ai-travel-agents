@@ -1,0 +1,30 @@
+# Terraform State and Local Files
+# These are generated during terraform execution
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# SSL certificates (keep example, ignore actual)
+cert.pem
+key.pem
+!cert.pem.example
+!key.pem.example
+
+# Local test files
+*.tftest.hcl
