@@ -1,4 +1,5 @@
 [build]
+# Global defaults (used if a service doesn't override)
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 watchPatterns = ["**"]
@@ -6,6 +7,49 @@ watchPatterns = ["**"]
 [deploy]
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5
+
+# Genkit API service (Node + Genkit)
+[services.genkit-api]
+name = "Genkit API"
+port = 4000
+healthCheckPath = "/api/health"
+
+[services.genkit-api.build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[services.genkit-api.variables]
+PORT = "4000"
+LLM_PROVIDER = "gemini"
+MODEL = "gemini-2.0-flash-lite"
+
+# Redis service (cache)
+[services.redis]
+name = "Redis"
+port = 6379
+
+[services.redis.build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.redis"
+
+[services.redis.variables]
+# No password by default; add REDIS_PASSWORD and update API REDIS_URL if enabled
+
+# OpenWebUI frontend service
+[services.openwebui]
+name = "OpenWebUI"
+port = 8080
+
+# Choose ONE build source: Dockerfile.openwebui in repo OR official image
+[services.openwebui.build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.openwebui"
+
+[services.openwebui.variables]
+OPENAI_API_BASE_URL = "http://genkit-api:4000/v1"
+OPENAI_API_KEY = "dummy-key"
+WEBUI_AUTH = "false"
+WEBUI_NAME = "Azure Travel Agent"
 
 [[services]]
 name = "api"
