@@ -13,7 +13,7 @@ env:
   REGISTRY_USERNAME: ${{ secrets.AZURE_REGISTRY_USERNAME }}
   REGISTRY_PASSWORD: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
   IMAGE_NAME: travel-agent-api
-  ACR_NAME: travelagentacr
+  ACR_NAME: travelagentacr13864
 
 jobs:
   build:
@@ -60,13 +60,9 @@ jobs:
       - name: Get ACR credentials
         id: acr_creds
         run: |
-          ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
-          ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query "passwords[0].value" -o tsv)
-          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer -o tsv)
-          
-          echo "acr_username=$ACR_USERNAME" >> $GITHUB_OUTPUT
-          echo "acr_password=$ACR_PASSWORD" >> $GITHUB_OUTPUT
-          echo "acr_login_server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+          echo "acr_username=${{ secrets.AZURE_REGISTRY_USERNAME }}" >> $GITHUB_OUTPUT
+          echo "acr_password=${{ secrets.AZURE_REGISTRY_PASSWORD }}" >> $GITHUB_OUTPUT
+          echo "acr_login_server=${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
       
       - name: Docker login to ACR
         uses: docker/login-action@v3
@@ -137,4 +133,4 @@ jobs:
     
     steps:
       - name: Azure logout
-        uses: azure/logout@v2
+        uses: azure/logout@v1
