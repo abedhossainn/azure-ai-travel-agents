@@ -3,6 +3,7 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
+!terraform.tfvars  # Allow terraform.tfvars for Resource Manager (uses OCI Vault for secrets)
 !terraform.tfvars.example
 .terraform/
 .terraform.lock.hcl
