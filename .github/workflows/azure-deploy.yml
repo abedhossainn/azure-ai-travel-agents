@@ -14,6 +14,8 @@ env:
   REGISTRY_PASSWORD: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
   IMAGE_NAME: travel-agent-api
   ACR_NAME: travelagentacr13864
+  AZURE_REGION: westus
+  AZURE_RESOURCE_GROUP: AzureAiTravelAgentWest
 
 jobs:
   build:
@@ -87,9 +89,10 @@ jobs:
         run: |
           az deployment group create \
             --name "travel-agent-deployment-${{ github.run_number }}" \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --template-file infra/main.bicep \
             --parameters \
+              location="${{ env.AZURE_REGION }}" \
               acrName="${{ env.ACR_NAME }}" \
               acrUsername="${{ secrets.AZURE_REGISTRY_USERNAME }}" \
               acrPassword="${{ secrets.AZURE_REGISTRY_PASSWORD }}" \
@@ -104,7 +107,7 @@ jobs:
         run: |
           OUTPUTS=$(az deployment group show \
             --name "travel-agent-deployment-${{ github.run_number }}" \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --query properties.outputs)
           
           API_URL=$(echo "$OUTPUTS" | jq -r '.apiUrl.value')
