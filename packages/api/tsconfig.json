@@ -12,10 +12,8 @@
     "rootDir": "./src"
   },
   "include": [
-    "src/index.ts",
-    "src/genkit/**/*.ts",
-    "src/scripts/**/*.ts",
-    "src/types/**/*.d.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": ["node_modules"]
 }
