@@ -2,7 +2,7 @@
 
 A professional travel assistant powered by Google Genkit orchestration and Gemini 2.5 Flash, featuring real-time Amadeus API integration and intelligent response caching.
 
-**Now deployed on Azure Container Instances with automated CI/CD pipeline!** 🚀
+**Now deployed on Azure Container Instances with automated CI/CD pipeline!**
 
 ## Key Features
 
