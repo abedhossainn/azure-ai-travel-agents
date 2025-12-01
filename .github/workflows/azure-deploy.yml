@@ -56,6 +56,23 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
+      - name: Register Azure providers
+        run: |
+          echo "Registering required Azure providers..."
+          az provider register --namespace Microsoft.ContainerInstance
+          az provider register --namespace Microsoft.ContainerRegistry
+          
+          echo "Waiting for provider registration..."
+          for i in {1..30}; do
+            STATUS=$(az provider show -n Microsoft.ContainerInstance --query registrationState -o tsv)
+            if [ "$STATUS" = "Registered" ]; then
+              echo "✅ Microsoft.ContainerInstance is registered"
+              break
+            fi
+            echo "  Status: $STATUS (waiting... $i/30)"
+            sleep 2
+          done
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
