@@ -10,6 +10,7 @@ import { pipeline } from "node:stream/promises";
 import { initRedis, getCacheStats, clearCachePattern } from "./utils/cache.js";
 import { getAiProvider } from "./genkit/ai.js";
 import { routeQuery } from "./utils/intent-router-v2.js";
+import { injectClientRateLimiter } from "./utils/request-rate-limiter.js";
 
 // Register all Genkit flows for telemetry and dev UI traces
 import "./genkit/register-flows.js";
@@ -70,6 +71,12 @@ apiRouter.get("/health", async (req, res) => {
 // MCP tools endpoint disabled (simplified mode)
 apiRouter.get("/tools", async (req, res) => {
   res.status(200).json({ tools: [], message: "Tools endpoint disabled in simplified mode" });
+});
+
+// Rate limiter injection script endpoint (for client-side use)
+apiRouter.get("/rate-limiter.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(injectClientRateLimiter());
 });
 
 // Chat endpoint with Server-Sent Events (SSE) for streaming responses

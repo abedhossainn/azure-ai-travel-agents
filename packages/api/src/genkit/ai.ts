@@ -9,12 +9,13 @@ const FORCE_GEMINI = true;
 
 /**
  * Exponential backoff retry for 429 errors (recommended by Google Cloud docs)
+ * Throws descriptive error after max retries so we can handle gracefully on client
  * https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429
  */
 async function retryWithExponentialBackoff<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
+  maxRetries: number = 2,
+  baseDelay: number = 800
 ): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -22,12 +23,29 @@ async function retryWithExponentialBackoff<T>(
     } catch (error: any) {
       const is429 = error?.message?.includes('429') || error?.message?.includes('Too Many Requests') || error?.message?.includes('Resource exhausted');
       
-      if (!is429 || attempt === maxRetries) {
-        throw error; // Not a rate limit error or out of retries
+      if (!is429) {
+        throw error; // Not a rate limit error, throw immediately
       }
       
-      // Exponential backoff with jitter: delay = baseDelay * 2^attempt + random(0, 1000)
-      const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+      if (attempt === maxRetries) {
+        // Out of retries, create descriptive rate limit error
+        console.error(`[RATE_LIMIT] Max retries exceeded for 429 error. User should wait before retrying.`);
+        const rateLimitError = new Error(
+          '⚠️ **API Quota Limit Reached**\n\n' +
+          'Your request exceeded the Google Gemini API rate limit (30 requests per minute).\n\n' +
+          '**What to do:**\n' +
+          '• Wait 30-60 seconds before submitting another query\n' +
+          '• The quota resets at midnight Pacific time (UTC-8)\n' +
+          '• For faster testing, consider upgrading your Google Cloud API to paid tier\n\n' +
+          '[Learn more about rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)'
+        );
+        (rateLimitError as any).code = 429;
+        (rateLimitError as any).isRateLimit = true;
+        throw rateLimitError;
+      }
+      
+      // Exponential backoff with jitter: delay = baseDelay * 2^attempt + random(0, 500)
+      const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 500;
       console.log(`[RETRY] 429 error, retrying in ${Math.round(delay)}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
