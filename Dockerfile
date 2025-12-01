@@ -8,13 +8,15 @@ WORKDIR /app
 COPY package*.json ./
 COPY packages ./packages
 
-# Install all dependencies including devDependencies
+# Install all dependencies including devDependencies for the monorepo
 # Use npm install (not ci) to work with workspaces properly
 RUN npm install
 
-# Build TypeScript from packages/api
-WORKDIR /app/packages/api
-RUN npm run build
+# Ensure workspace-specific devDependencies (like typescript) are installed for api
+RUN npm install -w packages/api
+
+# Build the API workspace explicitly
+RUN npm run -w packages/api build
 
 # Production stage
 FROM node:20-alpine
