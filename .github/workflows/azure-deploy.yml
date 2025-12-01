@@ -136,4 +136,5 @@ jobs:
     
     steps:
       - name: Azure logout
-        uses: azure/logout@v1
+        uses: azure/logout@v2
+        if: always()
