@@ -7,7 +7,19 @@ import { getCacheKey, getCached, setCached, withCache, CACHE_TTL } from "./cache
  * Format rate limit error response
  */
 function formatRateLimitResponse(): string {
-  return `# ⚠️ API Quota Limit Reached\n\nYour request exceeded the Google Gemini API rate limit (30 requests per minute).\n\n## What to do:\n- **Wait 30-60 seconds** before submitting another query\n- The quota resets at **midnight Pacific time (UTC-8)**\n- For faster testing, consider upgrading your Google Cloud API to a **paid tier**\n\n## Rate Limit Info:\n- **Free tier**: 30 requests per minute\n- **Per query**: ~8-10 LLM calls (parallel sub-agents)\n- **Safe spacing**: 3-5 seconds between queries recommended\n\n[Learn more about rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)`;\n}
+  const msg = "API QUOTA LIMIT REACHED\n\n" +
+    "Your request exceeded the Google Gemini API rate limit (30 requests per minute).\n\n" +
+    "WHAT TO DO:\n" +
+    "- Wait 30-60 seconds before submitting another query\n" +
+    "- The quota resets at midnight Pacific time (UTC-8)\n" +
+    "- For faster testing, upgrade your Google Cloud API to paid tier\n\n" +
+    "RATE LIMIT INFO:\n" +
+    "- Free tier: 30 requests per minute\n" +
+    "- Per query: approximately 8-10 LLM calls (parallel sub-agents)\n" +
+    "- Safe spacing: 3-5 seconds between queries recommended\n\n" +
+    "Learn more: https://ai.google.dev/gemini-api/docs/rate-limits";
+  return msg;
+}
 
 /**
  * Simplified Intent Router for Master Agent Architecture
