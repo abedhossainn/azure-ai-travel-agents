@@ -84,6 +84,11 @@ jobs:
       
       - name: Deploy Bicep template to Azure
         run: |
+          echo "Debug: Checking secret values..."
+          echo "GOOGLE_GENAI_API_KEY length: ${#GOOGLE_GENAI_API_KEY}"
+          echo "AMADEUS_CLIENT_ID length: ${#AMADEUS_CLIENT_ID}"
+          echo "AMADEUS_CLIENT_SECRET length: ${#AMADEUS_CLIENT_SECRET}"
+          
           az deployment group create \
             --name "travel-agent-deployment-${{ github.run_number }}" \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -98,6 +103,10 @@ jobs:
               googleGenaiApiKey="${{ secrets.GOOGLE_GENAI_API_KEY }}" \
               amadeusClientId="${{ secrets.AMADEUS_CLIENT_ID }}" \
               amadeusClientSecret="${{ secrets.AMADEUS_CLIENT_SECRET }}"
+        env:
+          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY }}
+          AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
+          AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
       
       - name: Get deployment outputs
         id: deployment_outputs
