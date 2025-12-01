@@ -1,32 +1,3 @@
-# Retrieve secrets from OCI Vault
-data "oci_secrets_secretmanagement_secret" "google_genai_api_key" {
-  secret_id = var.google_genai_api_key_secret_id
-}
-
-data "oci_secrets_secretmanagement_secret" "amadeus_client_id" {
-  secret_id = var.amadeus_client_id_secret_id
-}
-
-data "oci_secrets_secretmanagement_secret" "amadeus_client_secret" {
-  secret_id = var.amadeus_client_secret_secret_id
-}
-
-# Retrieve secret versions (latest)
-data "oci_secrets_secretmanagement_secret_version" "google_genai_api_key_version" {
-  secret_id       = data.oci_secrets_secretmanagement_secret.google_genai_api_key.id
-  secret_version_number = data.oci_secrets_secretmanagement_secret.google_genai_api_key.secret_versions[0].version_number
-}
-
-data "oci_secrets_secretmanagement_secret_version" "amadeus_client_id_version" {
-  secret_id       = data.oci_secrets_secretmanagement_secret.amadeus_client_id.id
-  secret_version_number = data.oci_secrets_secretmanagement_secret.amadeus_client_id.secret_versions[0].version_number
-}
-
-data "oci_secrets_secretmanagement_secret_version" "amadeus_client_secret_version" {
-  secret_id       = data.oci_secrets_secretmanagement_secret.amadeus_client_secret.id
-  secret_version_number = data.oci_secrets_secretmanagement_secret.amadeus_client_secret.secret_versions[0].version_number
-}
-
 # Availability Domains (for placement)
 data "oci_identity_availability_domains" "ad" {
   compartment_id = var.tenancy_ocid
@@ -68,14 +39,11 @@ resource "oci_container_instances_container_instance" "api" {
       "MODEL"          = "gemini-2.0-flash-lite"
       "REDIS_URL"      = "redis://${oci_ocache_cluster.redis_cluster.endpoint}:6379"
       "AMADEUS_HOST"   = "test"
-    }
-
-    # Secrets mounted as environment variables
-    # Note: These need to be decoded from the secret base64 content
-    extended_metadata = {
-      "GOOGLE_GENAI_API_KEY"     = base64decode(data.oci_secrets_secretmanagement_secret_version.google_genai_api_key_version.secret_version_content[0].content)
-      "AMADEUS_CLIENT_ID"        = base64decode(data.oci_secrets_secretmanagement_secret_version.amadeus_client_id_version.secret_version_content[0].content)
-      "AMADEUS_CLIENT_SECRET"    = base64decode(data.oci_secrets_secretmanagement_secret_version.amadeus_client_secret_version.secret_version_content[0].content)
+      # Vault secret OCIDs - container will fetch values at runtime
+      "OCI_VAULT_ID"   = var.vault_id
+      "GOOGLE_GENAI_API_KEY_SECRET_ID" = var.google_genai_api_key_secret_id
+      "AMADEUS_CLIENT_ID_SECRET_ID"    = var.amadeus_client_id_secret_id
+      "AMADEUS_CLIENT_SECRET_SECRET_ID" = var.amadeus_client_secret_secret_id
     }
 
     # Health check
@@ -101,7 +69,7 @@ resource "oci_container_instances_container_instance" "api" {
   # Restart policy
   restart_policy = "UNLESS_STOPPED"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 
   depends_on = [
     oci_core_subnet.public_subnet,
@@ -164,7 +132,7 @@ resource "oci_container_instances_container_instance" "webui" {
   # Restart policy
   restart_policy = "UNLESS_STOPPED"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 
   depends_on = [
     oci_container_instances_container_instance.api

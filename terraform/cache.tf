@@ -19,7 +19,7 @@ resource "oci_ocache_cluster" "redis_cluster" {
   subnet_id = oci_core_subnet.public_subnet.id
   nsg_ids   = [oci_core_network_security_group.cache_nsg.id]
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 
   depends_on = [
     oci_core_subnet.public_subnet

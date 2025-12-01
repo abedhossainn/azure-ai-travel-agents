@@ -50,19 +50,33 @@ resource "oci_dns_rrset" "webui_record" {
 }
 
 # OCI Certificate Authority (optional, for managed certificates)
-# Note: Requires manual setup or approval process in OCI CA
-resource "oci_certificatesmanagement_certificate" "api_cert" {
-  count = !var.use_self_signed_cert && var.certificate_subject_common_name != "" ? 1 : 0
+# Simplified: Uses self-signed certificate for now
+# For production, integrate with OCI Certificate Management Service
+resource "tls_self_signed_cert" "api_cert" {
+  count = var.use_self_signed_cert && var.certificate_subject_common_name != "" ? 1 : 0
 
-  compartment_id = var.compartment_ocid
-  certificate_config {
-    config_type = "IMPORTED"
-    # For managed certificates, use CONFIG_TYPE = "ISSUED" and configure CA
+  private_key_pem = tls_private_key.api_key[0].private_key_pem
+
+  subject {
+    common_name  = var.certificate_subject_common_name
+    organization = "Travel Agent"
   }
 
-  display_name = var.certificate_display_name
+  validity_period_hours = 8760 # 1 year
 
-  tags = local.common_tags
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
+# Private key for self-signed certificate
+resource "tls_private_key" "api_key" {
+  count = var.use_self_signed_cert && var.certificate_subject_common_name != "" ? 1 : 0
+
+  algorithm = "RSA"
+  rsa_bits  = 2048
 }
 
 # WAF Policy (optional, for security)

@@ -5,7 +5,7 @@ resource "oci_core_vcn" "travel_agent_vcn" {
   display_name   = local.vcn_display_name
   dns_label      = "${var.project_name}${var.environment}"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 # Internet Gateway
@@ -15,7 +15,7 @@ resource "oci_core_internet_gateway" "travel_agent_igw" {
   display_name   = local.igw_display_name
   enabled        = true
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 # Public Subnet
@@ -28,7 +28,7 @@ resource "oci_core_subnet" "public_subnet" {
   prohibit_public_ip_on_vlan = false
   route_table_id            = oci_core_route_table.public_rt.id
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 # Route Table for public subnet
@@ -43,7 +43,7 @@ resource "oci_core_route_table" "public_rt" {
     network_entity_id = oci_core_internet_gateway.travel_agent_igw.id
   }
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 # Security List for public resources
@@ -131,13 +131,7 @@ resource "oci_core_security_list" "public_security_list" {
     description = "Redis cache"
   }
 
-  tags = local.common_tags
-}
-
-# Attach security list to subnet
-resource "oci_core_subnet_security_list_association" "subnet_security_list" {
-  subnet_id              = oci_core_subnet.public_subnet.id
-  security_list_id      = oci_core_security_list.public_security_list.id
+  freeform_tags = local.common_tags
 }
 
 # Network Security Groups (optional, for finer-grained control)
@@ -146,7 +140,7 @@ resource "oci_core_network_security_group" "api_nsg" {
   vcn_id         = oci_core_vcn.travel_agent_vcn.id
   display_name   = "${local.resource_prefix}-api-nsg"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 resource "oci_core_network_security_group" "cache_nsg" {
@@ -154,7 +148,7 @@ resource "oci_core_network_security_group" "cache_nsg" {
   vcn_id         = oci_core_vcn.travel_agent_vcn.id
   display_name   = "${local.resource_prefix}-cache-nsg"
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 }
 
 # NSG Rules for API

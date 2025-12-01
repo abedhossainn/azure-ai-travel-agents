@@ -18,7 +18,7 @@ resource "oci_load_balancer_load_balancer" "travel_agent_lb" {
 
   is_private = false
 
-  tags = local.common_tags
+  freeform_tags = local.common_tags
 
   depends_on = [oci_core_subnet.public_subnet]
 }
