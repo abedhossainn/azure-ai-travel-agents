@@ -1,33 +1,27 @@
-# Outputs
-output "load_balancer_public_ip" {
-  description = "Public IP address of the load balancer"
-  value       = oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address
+# Outputs - Container Public IPs
+output "api_instance_public_ips" {
+  description = "Public IP addresses of API container instances"
+  value       = [for inst in oci_container_instances_container_instance.api : inst.vnics[0].public_ip_address]
 }
 
-output "api_url" {
-  description = "URL to access the API"
-  value       = "http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:${var.api_port}"
+output "api_urls" {
+  description = "URLs to access the API instances"
+  value       = [for inst in oci_container_instances_container_instance.api : "http://${inst.vnics[0].public_ip_address}:4000"]
 }
 
-output "api_health_check_url" {
-  description = "URL for API health check"
-  value       = "http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:${var.api_port}/api/health"
+output "api_health_check_urls" {
+  description = "URLs for API health checks"
+  value       = [for inst in oci_container_instances_container_instance.api : "http://${inst.vnics[0].public_ip_address}:4000/api/health"]
 }
 
-output "webui_url" {
-  description = "URL to access the Open WebUI"
-  value       = "http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:3000"
+output "webui_instance_public_ips" {
+  description = "Public IP addresses of WebUI container instances"
+  value       = [for inst in oci_container_instances_container_instance.webui : inst.vnics[0].public_ip_address]
 }
 
-output "redis_endpoint" {
-  description = "Redis cache endpoint"
-  value       = oci_ocache_cluster.redis_cluster.endpoint
-}
-
-output "redis_connection_string" {
-  description = "Redis connection string for containers"
-  value       = "redis://${oci_ocache_cluster.redis_cluster.endpoint}:6379"
-  sensitive   = false
+output "webui_urls" {
+  description = "URLs to access the WebUI instances"
+  value       = [for inst in oci_container_instances_container_instance.webui : "http://${inst.vnics[0].public_ip_address}:8080"]
 }
 
 output "vcn_id" {
@@ -45,39 +39,9 @@ output "api_instance_ids" {
   value       = [for inst in oci_container_instances_container_instance.api : inst.id]
 }
 
-output "api_instance_public_ips" {
-  description = "Public IP addresses of API container instances"
-  value       = [for inst in oci_container_instances_container_instance.api : inst.container_instance_hostname]
-}
-
 output "webui_instance_ids" {
   description = "OCIDs of WebUI container instances"
   value       = [for inst in oci_container_instances_container_instance.webui : inst.id]
-}
-
-output "webui_instance_public_ips" {
-  description = "Public IP addresses of WebUI container instances"
-  value       = [for inst in oci_container_instances_container_instance.webui : inst.container_instance_hostname]
-}
-
-output "load_balancer_id" {
-  description = "OCID of the load balancer"
-  value       = oci_load_balancer_load_balancer.travel_agent_lb.id
-}
-
-output "domain_name" {
-  description = "Domain name mapped to load balancer (if configured)"
-  value       = var.domain_name != "" ? "https://${var.domain_name}" : "Not configured"
-}
-
-output "ssl_certificate_status" {
-  description = "SSL certificate configuration status"
-  value       = var.certificate_subject_common_name != "" ? (var.use_self_signed_cert ? "Self-signed" : "OCI CA managed") : "Not configured"
-}
-
-output "cache_cluster_id" {
-  description = "OCID of the OCI Cache cluster"
-  value       = oci_ocache_cluster.redis_cluster.id
 }
 
 output "compartment_id" {
@@ -95,24 +59,23 @@ output "access_instructions" {
   value = <<-EOT
     ===== Travel Agent Deployment Complete =====
 
-    API Access:
-    - HTTP:  http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:${var.api_port}
-    - Health: http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:${var.api_port}/api/health
+    API Access (direct via container public IPs):
+    ${join("\n    ", [for i, ip in oci_container_instances_container_instance.api[*].vnics[0].public_ip_address : "- Instance ${i + 1}: http://${ip}:4000"])}
 
-    WebUI Access:
-    - HTTP:  http://${oci_load_balancer_load_balancer.travel_agent_lb.ip_address_details[0].ip_address}:3000
+    API Health Check:
+    ${join("\n    ", [for i, ip in oci_container_instances_container_instance.api[*].vnics[0].public_ip_address : "- Instance ${i + 1}: http://${ip}:4000/api/health"])}
 
-    Redis Cache:
-    - Endpoint: ${oci_ocache_cluster.redis_cluster.endpoint}:6379
-    - Connection string: redis://${oci_ocache_cluster.redis_cluster.endpoint}:6379
+    WebUI Access (direct via container public IPs):
+    ${join("\n    ", [for i, ip in oci_container_instances_container_instance.webui[*].vnics[0].public_ip_address : "- Instance ${i + 1}: http://${ip}:8080"])}
 
-    Domain (if configured):
-    - API:   https://${var.domain_name != "" ? var.domain_name : "Not configured"}
-    - WebUI: https://${var.domain_name != "" ? var.domain_name : "Not configured"}:3000
+    Network Configuration:
+    - VCN: ${oci_core_vcn.travel_agent_vcn.display_name}
+    - Subnet: ${oci_core_subnet.public_subnet.display_name}
+    - Region: ${var.region}
 
     Security Notes:
     - Secrets (API keys) are stored in OCI Vault and retrieved at runtime
-    - All outbound traffic from containers requires egress rules
-    - Load balancer handles SSL/TLS termination
+    - Containers have public IP addresses (ensure security groups are properly configured)
+    - Configure DNS records to point to container public IPs for production use
   EOT
 }

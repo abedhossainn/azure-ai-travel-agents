@@ -17,49 +17,31 @@ resource "oci_container_instances_container_instance" "api" {
     ocpus         = var.api_container_cpu
   }
 
-  subnet_id              = oci_core_subnet.public_subnet.id
-  nsg_ids                = [oci_core_network_security_group.api_nsg.id]
-  assign_public_ip       = true
+  # Network configuration
+  vnics {
+    subnet_id              = oci_core_subnet.public_subnet.id
+    nsg_ids                = [oci_core_network_security_group.api_nsg.id]
+    skip_source_dest_check = false
+  }
 
   # Container configuration
   containers {
     image_url = var.api_image_uri
     display_name = "travel-agent-api"
 
-    # Port mapping
-    port_mappings {
-      port         = var.api_port
-      protocol     = "TCP"
-    }
-
     # Environment variables from secrets
     environment_variables = {
       "NODE_ENV"       = "production"
       "LLM_PROVIDER"   = "gemini"
       "MODEL"          = "gemini-2.0-flash-lite"
-      "REDIS_URL"      = "redis://redis:6379"  # Configure external Redis or disable caching
+      "REDIS_URL"      = "redis://redis:6379"
       "AMADEUS_HOST"   = "test"
-      # Vault secret OCIDs - container will fetch values at runtime
       "OCI_VAULT_ID"   = var.vault_id
       "GOOGLE_GENAI_API_KEY_SECRET_ID" = var.google_genai_api_key_secret_id
       "AMADEUS_CLIENT_ID_SECRET_ID"    = var.amadeus_client_id_secret_id
       "AMADEUS_CLIENT_SECRET_SECRET_ID" = var.amadeus_client_secret_secret_id
     }
-
-    # Health check configuration
-    # Note: Simplified for MVP - can be enhanced in production
-    # health_checks {
-    #   health_check_type = "HTTP"
-    #   port              = var.api_port
-    #   url_path          = "/api/health"
-    # }
-
-    # Logging
-    is_resource_principal_auth_enabled = false
   }
-
-  # Restart policy
-  restart_policy = "UNLESS_STOPPED"
 
   freeform_tags = local.common_tags
 
@@ -82,20 +64,17 @@ resource "oci_container_instances_container_instance" "webui" {
     ocpus         = var.webui_container_cpu
   }
 
-  subnet_id              = oci_core_subnet.public_subnet.id
-  nsg_ids                = [oci_core_network_security_group.api_nsg.id]
-  assign_public_ip       = true
+  # Network configuration
+  vnics {
+    subnet_id              = oci_core_subnet.public_subnet.id
+    nsg_ids                = [oci_core_network_security_group.api_nsg.id]
+    skip_source_dest_check = false
+  }
 
   # Container configuration
   containers {
     image_url = var.webui_image_uri
     display_name = "open-webui"
-
-    # Port mapping (Open WebUI uses 8080 internally)
-    port_mappings {
-      port         = 8080
-      protocol     = "TCP"
-    }
 
     # Environment variables
     environment_variables = {
@@ -104,19 +83,7 @@ resource "oci_container_instances_container_instance" "webui" {
       "WEBUI_NAME"          = "Travel Agent"
       "WEBUI_AUTH"          = "false"
     }
-
-    # Health check configuration
-    # Note: Simplified for MVP - can be enhanced in production
-    # health_checks {
-    #   health_check_type = "HTTP"
-    #   port              = 8080
-    #   url_path          = "/"
-    # }
-
   }
-
-  # Restart policy
-  restart_policy = "UNLESS_STOPPED"
 
   freeform_tags = local.common_tags
 
