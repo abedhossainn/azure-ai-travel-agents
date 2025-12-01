@@ -20,13 +20,12 @@ resource "oci_core_internet_gateway" "travel_agent_igw" {
 
 # Public Subnet
 resource "oci_core_subnet" "public_subnet" {
-  compartment_id            = var.compartment_ocid
-  vcn_id                    = oci_core_vcn.travel_agent_vcn.id
-  cidr_block                = var.subnet_cidr
-  display_name              = local.subnet_display_name
-  dns_label                 = "public"
-  prohibit_public_ip_on_vlan = false
-  route_table_id            = oci_core_route_table.public_rt.id
+  compartment_id   = var.compartment_ocid
+  vcn_id           = oci_core_vcn.travel_agent_vcn.id
+  cidr_block       = var.subnet_cidr
+  display_name     = local.subnet_display_name
+  dns_label        = "public"
+  route_table_id   = oci_core_route_table.public_rt.id
 
   freeform_tags = local.common_tags
 }
