@@ -1,8 +1,0 @@
-# Official OpenWebUI image (lightweight, no Ollama bundled)
-FROM ghcr.io/open-webui/open-webui:main
-
-# Listens on port 8080 by default
-# Configure via Railway environment variables:
-# - OPENAI_API_BASE_URL: http://genkit-api.railway.internal:4000/v1
-# - OPENAI_API_KEY: dummy-key
-# - WEBUI_AUTH: false (for public access)

@@ -1,5 +1,4 @@
 # Multi-stage build for optimal image size
-# Railway Production Build
 FROM node:20-alpine AS builder
 
 WORKDIR /app

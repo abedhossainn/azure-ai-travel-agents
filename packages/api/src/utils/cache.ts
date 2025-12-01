@@ -27,10 +27,8 @@ export async function initRedis(): Promise<void> {
     const urlsToTry: string[] = [];
     const envUrl = process.env.REDIS_URL;
     if (envUrl) urlsToTry.push(envUrl);
-    // Common Railway internal hostnames
+    // Docker Compose and local fallback
     urlsToTry.push('redis://redis:6379');
-    urlsToTry.push('redis://redis.railway.internal:6379');
-    // Local fallback
     urlsToTry.push('redis://localhost:6379');
 
     let lastError: any = null;
