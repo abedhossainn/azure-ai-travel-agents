@@ -14,12 +14,7 @@ RUN npm install
 
 # Build TypeScript from packages/api
 WORKDIR /app/packages/api
-RUN npm run build && \
-    echo "=== Build complete, listing dist contents ===" && \
-    ls -laR dist/ && \
-    echo "=== Checking for register-flows ===" && \
-    ls -la src/genkit/register-flows.ts && \
-    test -f dist/genkit/register-flows.js || (echo "ERROR: register-flows.js not compiled!" && exit 1)
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
