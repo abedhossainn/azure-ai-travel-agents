@@ -121,8 +121,12 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             }
           ]
           livenessProbe: {
-            tcpSocket: {
-              port: 6379
+            exec: {
+              command: [
+                'sh'
+                '-c'
+                'redis-server --version || exit 1'
+              ]
             }
             initialDelaySeconds: 15
             periodSeconds: 10
