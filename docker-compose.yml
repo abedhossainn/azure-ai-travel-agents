@@ -30,7 +30,7 @@ services:
     environment:
       - NODE_ENV=production
       - LLM_PROVIDER=gemini
-      - MODEL=gemini-2.0-flash-lite
+      - MODEL=gemini-2.5-flash-lite
       - REDIS_URL=redis://redis:6379
     depends_on:
       redis:

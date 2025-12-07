@@ -236,7 +236,7 @@ OLLAMA_MODEL=mistral
 ```bash
 # OLLAMA_URL=                        # Comment out or remove
 GOOGLE_GENAI_API_KEY=your_key
-model=gemini-2.0-flash-lite
+model=gemini-2.5-flash-lite
 ```
 
 ---

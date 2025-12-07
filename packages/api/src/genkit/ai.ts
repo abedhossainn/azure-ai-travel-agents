@@ -61,7 +61,7 @@ async function retryWithExponentialBackoff<T>(
 // Ollama interception happens below in the generate() wrapper
 export const ai = genkit({
   plugins: [googleAI()],
-  model: googleAI.model((process.env.MODEL || "gemini-2.0-flash-lite").replace(/^"|"/g, ""), {
+  model: googleAI.model((process.env.MODEL || "gemini-2.5-flash-lite").replace(/^"|"$/g, ""), {
     temperature: 0.7,
   }),
 });
@@ -106,7 +106,7 @@ export function getAiProvider() {
   // Using Gemini exclusively (Ollama disabled via FORCE_GEMINI)
   return {
     provider: "google-genai",
-    model: process.env.MODEL || "gemini-2.0-flash-lite",
+    model: process.env.MODEL || "gemini-2.5-flash-lite",
     url: "https://generativelanguage.googleapis.com",
   };
 }

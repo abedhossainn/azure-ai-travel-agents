@@ -322,7 +322,7 @@ Access at http://localhost:4100
 | `AMADEUS_CLIENT_SECRET` | **Yes** | Amadeus API client secret for authentication | — |
 | `AMADEUS_HOST` | No | Amadeus environment (`test` or `production`) | `test` |
 | `REDIS_URL` | No | Redis connection string for caching | `redis://localhost:6379` |
-| `model` | No | Gemini model identifier | `gemini-2.0-flash-lite` |
+| `model` | No | Gemini model identifier | `gemini-2.5-flash-lite` |
 | `NODE_ENV` | No | Node.js environment mode | `production` |
 | `PORT` | No | API server port | `4000` |
 

@@ -12,6 +12,13 @@
       "args": ["mcp"],
       "cwd": "/home/abed/SENG/691 Agentic AI/Project/packages/api"
     },
-    
+    "azure": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@azure/mcp-server"],
+      "env": {
+        "AZURE_SUBSCRIPTION_ID": "36d6083c-5c33-4ef6-8e72-1061af1015a7"
+      }
+    }
   }
 }
