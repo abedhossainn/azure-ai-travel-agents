@@ -118,7 +118,7 @@ function appendCacheMetric(line: string) {
     
     // Write to stdout immediately for real-time visibility
     process.stdout.write(`[CACHE] ${logLine}\n`);
-  } catch (
+  } catch {
     // ignore logging errors
   }
 }
