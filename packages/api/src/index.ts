@@ -266,7 +266,7 @@ apiRouter.get("/cache/logs", async (req, res) => {
     // Read last N lines (default 50)
     const limit = parseInt(req.query.limit as string) || 50;
     const content = fs.readFileSync(logPath, 'utf-8');
-    const lines = content.split('\n').filter(l => l.trim());
+    const lines = content.split('\n').filter((l: string) => l.trim());
     const lastLines = lines.slice(Math.max(0, lines.length - limit));
     
     return res.status(200).json({ 
