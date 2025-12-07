@@ -300,7 +300,7 @@ async function _routeQueryInternal(query: string, days?: number, opts?: { curren
   const responseKey = getCacheKey("response", baseParams);
   const cachedResponse = await getCached<string>(responseKey);
   if (cachedResponse) {
-    console.log(`[ROUTE] Returning cached response`);
+    console.log(`[ROUTE] Returning cached response (base key)`);
     return cachedResponse;
   }
   
@@ -329,6 +329,13 @@ async function _routeQueryInternal(query: string, days?: number, opts?: { curren
   if (opts?.currency) enrichedParams.currency = opts.currency;
   if (opts?.locale) enrichedParams.locale = opts.locale;
   const enrichedResponseKey = getCacheKey("response", enrichedParams);
+  const cachedEnrichedResponse = await getCached<string>(enrichedResponseKey);
+  if (cachedEnrichedResponse) {
+    console.log(`[ROUTE] Returning cached response (enriched key)`);
+    // Also refresh the base cache for parity with enriched key
+    await setCached(responseKey, cachedEnrichedResponse, CACHE_TTL.RESPONSES);
+    return cachedEnrichedResponse;
+  }
 
   // 4. Route to master agent with appropriate flags
   let result: any;
@@ -429,6 +436,9 @@ async function _routeQueryInternal(query: string, days?: number, opts?: { curren
 
   console.log(`[ROUTE] Formatting response with data:`, JSON.stringify(result).substring(0, 200));
   const formatted = formatFullResponse(result as any);
-  await setCached(enrichedResponseKey, formatted, CACHE_TTL.RESPONSES);
+  await Promise.all([
+    setCached(enrichedResponseKey, formatted, CACHE_TTL.RESPONSES),
+    setCached(responseKey, formatted, CACHE_TTL.RESPONSES),
+  ]);
   return formatted;
 }
