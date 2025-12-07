@@ -42,8 +42,23 @@ param amadeusClientSecret string = ''
 @description('Storage account name for persistent volumes')
 param storageAccountName string = 'wagent${substring(uniqueString(resourceGroup().id), 0, 8)}'
 
+@description('Log Analytics workspace name')
+param logAnalyticsWorkspaceName string = 'travel-agent-logs-${uniqueString(resourceGroup().id)}'
+
 // ACR login server URL
 var acrLoginServer = '${acrName}.azurecr.io'
+
+// Log Analytics Workspace for container logging
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logAnalyticsWorkspaceName
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
 
 // Create Storage Account for persistent volumes
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -269,6 +284,12 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
         password: acrPassword
       }
     ]
+    diagnostics: {
+      logAnalytics: {
+        workspaceId: logAnalyticsWorkspace.properties.customerId
+        workspaceKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
   }
   dependsOn: [
     webuiFileShare
