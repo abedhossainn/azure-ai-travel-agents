@@ -39,8 +39,47 @@ param amadeusClientId string = ''
 @secure()
 param amadeusClientSecret string = ''
 
+@description('Storage account name for persistent volumes')
+param storageAccountName string = 'wagent${substring(uniqueString(resourceGroup().id), 0, 8)}'
+
 // ACR login server URL
 var acrLoginServer = '${acrName}.azurecr.io'
+
+// Create Storage Account for persistent volumes
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Hot'
+    minimumTlsVersion: 'TLS1_2'
+  }
+}
+
+// Create File Share for Open WebUI data
+resource webuiFileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+  name: '${storageAccountName}/default/webui-data'
+  dependsOn: [
+    storageAccount
+  ]
+  properties: {
+    shareQuota: 5
+  }
+}
+
+// Create File Share for Redis data
+resource redisFileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+  name: '${storageAccountName}/default/redis-data'
+  dependsOn: [
+    storageAccount
+  ]
+  properties: {
+    shareQuota: 5
+  }
+}
 
 // Create Container Instances - Container Group with all 3 services
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
@@ -72,15 +111,20 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             '256mb'
             '--maxmemory-policy'
             'allkeys-lru'
+            '--dir'
+            '/data'
+          ]
+          volumeMounts: [
+            {
+              name: 'redis-data'
+              mountPath: '/data'
+            }
           ]
           livenessProbe: {
-            exec: {
-              command: [
-                'redis-cli'
-                'ping'
-              ]
+            tcpSocket: {
+              port: 6379
             }
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           }
         }
@@ -149,6 +193,12 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               protocol: 'TCP'
             }
           ]
+          volumeMounts: [
+            {
+              name: 'webui-data'
+              mountPath: '/app/backend/data'
+            }
+          ]
           environmentVariables: [
             {
               name: 'OPENAI_API_BASE_URL'
@@ -190,6 +240,24 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
         }
       ]
     }
+    volumes: [
+      {
+        name: 'webui-data'
+        azureFile: {
+          shareName: 'webui-data'
+          storageAccountName: storageAccountName
+          storageAccountKey: storageAccount.listKeys().keys[0].value
+        }
+      }
+      {
+        name: 'redis-data'
+        azureFile: {
+          shareName: 'redis-data'
+          storageAccountName: storageAccountName
+          storageAccountKey: storageAccount.listKeys().keys[0].value
+        }
+      }
+    ]
     imageRegistryCredentials: [
       {
         server: acrLoginServer
@@ -198,6 +266,10 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       }
     ]
   }
+  dependsOn: [
+    webuiFileShare
+    redisFileShare
+  ]
 }
 
 // Outputs
