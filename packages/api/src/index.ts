@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import path from "node:path";
+import fs from "node:fs";
 const envPath = path.resolve(process.cwd(), ".env");
 dotenv.config({ path: envPath });
 
@@ -254,8 +255,6 @@ apiRouter.get("/cache/stats", async (req, res) => {
 // @ts-ignore - Ignoring TypeScript errors for Express route handlers
 apiRouter.get("/cache/logs", async (req, res) => {
   try {
-    const fs = require('fs');
-    const path = require('path');
     const logPath = path.resolve(process.cwd(), '../../local-reports/cache-live.log');
     
     // Check if file exists
