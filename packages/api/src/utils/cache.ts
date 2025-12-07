@@ -113,8 +113,12 @@ function appendCacheMetric(line: string) {
     
     // Also write to a live cache log for monitoring
     const cachePath = path.resolve(process.cwd(), '../../local-reports/cache-live.log');
-    fs.appendFileSync(cachePath, `${new Date().toISOString()} ${line}\n`);
-  } catch {
+    const logLine = `${new Date().toISOString()} ${line}`;
+    fs.appendFileSync(cachePath, logLine + '\n');
+    
+    // Write to stdout immediately for real-time visibility
+    process.stdout.write(`[CACHE] ${logLine}\n`);
+  } catch (
     // ignore logging errors
   }
 }
