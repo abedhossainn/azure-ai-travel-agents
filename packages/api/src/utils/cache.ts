@@ -127,10 +127,10 @@ export async function getCached<T>(key: string): Promise<T | null> {
     const cached = await redisClient.get(key);
     if (!cached) return null;
 
-  const data = JSON.parse(cached);
-  const hitLine = `✓ Cache HIT: ${key}`;
-  console.log(hitLine);
-  appendCacheMetric(hitLine);
+    const data = JSON.parse(cached);
+    const hitLine = `METRIC: CACHE HIT ${key}`;
+    process.stdout.write(hitLine + '\n');
+    appendCacheMetric(hitLine);
     return data as T;
   } catch (error: any) {
     return null;
@@ -151,10 +151,10 @@ export async function setCached(key: string, data: any, ttlSeconds: number): Pro
   }
 
   try {
-  await redisClient.setEx(key, ttlSeconds, JSON.stringify(data));
-  const setLine = `✓ Cache SET: ${key} (TTL: ${ttlSeconds}s)`;
-  console.log(setLine);
-  appendCacheMetric(setLine);
+    await redisClient.setEx(key, ttlSeconds, JSON.stringify(data));
+    const setLine = `METRIC: CACHE SET ${key} ttl=${ttlSeconds}s`;
+    process.stdout.write(setLine + '\n');
+    appendCacheMetric(setLine);
   } catch (error: any) {
     // Cache set error - silently ignore
   }
@@ -175,8 +175,8 @@ export async function withCache<T>(
   }
 
   // Cache miss - fetch fresh data
-  const missLine = `✗ Cache MISS: ${cacheKey}`;
-  console.log(missLine);
+  const missLine = `METRIC: CACHE MISS ${cacheKey}`;
+  process.stdout.write(missLine + '\n');
   appendCacheMetric(missLine);
   const freshData = await fetchFn();
 
