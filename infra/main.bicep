@@ -138,9 +138,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           livenessProbe: {
             exec: {
               command: [
-                'sh'
-                '-c'
-                'redis-server --version || exit 1'
+                'redis-cli'
+                'ping'
               ]
             }
             initialDelaySeconds: 15

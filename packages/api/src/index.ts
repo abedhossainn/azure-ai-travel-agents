@@ -250,6 +250,36 @@ apiRouter.get("/cache/stats", async (req, res) => {
   }
 });
 
+// Cache logs endpoint (real-time cache hit/miss monitoring)
+// @ts-ignore - Ignoring TypeScript errors for Express route handlers
+apiRouter.get("/cache/logs", async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.resolve(process.cwd(), '../../local-reports/cache-live.log');
+    
+    // Check if file exists
+    if (!fs.existsSync(logPath)) {
+      return res.status(200).json({ logs: [], message: "No cache logs yet" });
+    }
+    
+    // Read last N lines (default 50)
+    const limit = parseInt(req.query.limit as string) || 50;
+    const content = fs.readFileSync(logPath, 'utf-8');
+    const lines = content.split('\n').filter(l => l.trim());
+    const lastLines = lines.slice(Math.max(0, lines.length - limit));
+    
+    return res.status(200).json({ 
+      logs: lastLines,
+      total: lines.length,
+      limit,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Unknown error" });
+  }
+});
+
 // Clear cache endpoint (admin/debug)
 // @ts-ignore - Ignoring TypeScript errors for Express route handlers
 apiRouter.delete("/cache/clear", async (req, res) => {
@@ -421,6 +451,7 @@ app.listen(PORT, async () => {
   console.log(`  - MCP Tools: http://localhost:${PORT}/api/tools (GET)`);
   console.log(`  - Chat: http://localhost:${PORT}/api/chat (POST)`);
   console.log(`  - Cache stats: http://localhost:${PORT}/api/cache/stats (GET)`);
+  console.log(`  - Cache logs: http://localhost:${PORT}/api/cache/logs (GET)`);
   console.log(`  - Clear cache: http://localhost:${PORT}/api/cache/clear (DELETE)`);
   
   // Initialize Redis connection

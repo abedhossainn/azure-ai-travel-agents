@@ -110,6 +110,10 @@ function appendCacheMetric(line: string) {
     const outPath = path.resolve(process.cwd(), '../../local-reports/modified-api.log');
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.appendFileSync(outPath, line + '\n');
+    
+    // Also write to a live cache log for monitoring
+    const cachePath = path.resolve(process.cwd(), '../../local-reports/cache-live.log');
+    fs.appendFileSync(cachePath, `${new Date().toISOString()} ${line}\n`);
   } catch {
     // ignore logging errors
   }
