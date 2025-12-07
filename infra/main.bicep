@@ -160,7 +160,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             }
             {
               name: 'MODEL'
-              value: 'gemini-2.0-flash-lite'
+              value: 'gemini-2.5-flash-lite'
             }
             {
               name: 'REDIS_URL'
