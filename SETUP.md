@@ -81,11 +81,11 @@ git checkout ai-travel-agent-phase3
 ```
 
 This will:
-- ✅ Check prerequisites
-- ✅ Install dependencies
-- ✅ Compile TypeScript
-- ✅ Verify build
-- ✅ Create `.env` file (if missing)
+- Check prerequisites
+- Install dependencies
+- Compile TypeScript
+- Verify build
+- Create `.env` file (if missing)
 
 ### 3. Configure API Keys
 
@@ -192,7 +192,7 @@ The build script will:
 [SUCCESS] Dependencies installed
 [SUCCESS] TypeScript build successful
 [SUCCESS] Build verified - 29 files, size: 240K
-BUILD SUCCESSFUL ✅
+BUILD SUCCESSFUL
 ```
 
 ### Step 4: Manual Build (if needed)
@@ -298,7 +298,7 @@ https://developers.amadeus.com/
 
 ## Running the Application
 
-### Option A: Docker Compose (Recommended) 🐳
+### Option A: Docker Compose (Recommended)
 
 **Easiest way to run all services:**
 
@@ -496,26 +496,25 @@ npm run genkit:dev
 ### Project Structure
 
 ```
-.
-├── packages/
-│   ├── api/                 # Main API server
-│   │   ├── src/
-│   │   │   ├── genkit/      # Genkit flows and agents
-│   │   │   ├── utils/       # Cache, routing, helpers
-│   │   │   └── index.ts     # Server entry point
-│   │   ├── dist/            # Compiled JavaScript
-│   │   └── package.json
-│   ├── ui/                  # Open WebUI (Angular)
-│   └── tools/               # MCP tools (optional)
-├── infra/
-│   ├── main.bicep           # Azure deployment
-│   └── main.json
-├── .github/
-│   └── workflows/           # CI/CD pipelines
-├── Dockerfile               # Container image
-├── docker-compose.yml       # Local services
-├── build.sh                 # Build script
-└── README.md                # Main documentation
+- packages/
+  - api/                 # Main API server
+    - src/
+      - genkit/      # Genkit flows and agents
+      - utils/       # Cache, routing, helpers
+      - index.ts     # Server entry point
+    - dist/            # Compiled JavaScript
+    - package.json
+  - ui/                  # Open WebUI (Angular)
+  - tools/               # MCP tools (optional)
+- infra/
+  - main.bicep           # Azure deployment
+  - main.json
+- .github/
+  - workflows/           # CI/CD pipelines
+- Dockerfile               # Container image
+- docker-compose.yml       # Local services
+- build.sh                 # Build script
+- README.md                # Main documentation
 ```
 
 ### Available Scripts
@@ -597,11 +596,11 @@ npm run lint
 
 After setup is complete:
 
-1. ✅ Review [README.md](./README.md) for feature overview
-2. ✅ Check [API documentation](http://localhost:4000/)
-3. ✅ Explore Genkit flows in `packages/api/src/genkit/agents/`
-4. ✅ Monitor cache performance via `/api/cache/logs`
-5. ✅ Deploy to Azure using `./infra/main.bicep`
+1. Review [README.md](./README.md) for feature overview
+2. Check [API documentation](http://localhost:4000/)
+3. Explore Genkit flows in `packages/api/src/genkit/agents/`
+4. Monitor cache performance via `/api/cache/logs`
+5. Deploy to Azure using `./infra/main.bicep`
 
 ---
 

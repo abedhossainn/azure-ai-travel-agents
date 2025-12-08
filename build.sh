@@ -122,13 +122,13 @@ AMADEUS_CLIENT_SECRET=your_amadeus_client_secret_here
 ENVTEMPLATE
         
         log_info "Template .env file created"
-        log_warn "⚠️  IMPORTANT: Update $ENV_FILE with your actual API keys!"
+        log_warn "IMPORTANT: Update $ENV_FILE with your actual API keys!"
     else
         log_success ".env file exists"
         
         # Check if API keys are set
         if grep -q "your_gemini_api_key_here" "$ENV_FILE"; then
-            log_warn "⚠️  GOOGLE_GENAI_API_KEY not configured in .env"
+            log_warn "GOOGLE_GENAI_API_KEY not configured in .env"
         else
             log_success "GOOGLE_GENAI_API_KEY is configured"
         fi
@@ -139,48 +139,48 @@ ENVTEMPLATE
 show_startup_instructions() {
     cat << 'EOF'
 
-╔════════════════════════════════════════════════════════════════════╗
-║                    BUILD SUCCESSFUL ✅                            ║
-╚════════════════════════════════════════════════════════════════════╝
+======================================================================
+BUILD SUCCESSFUL
+======================================================================
 
-📋 NEXT STEPS:
+Next steps:
 
-1️⃣  Configure Environment Variables:
+1) Configure Environment Variables:
     Edit packages/api/.env with your API keys:
     - GOOGLE_GENAI_API_KEY (required)
     - AMADEUS_CLIENT_ID (optional)
     - AMADEUS_CLIENT_SECRET (optional)
 
-2️⃣  Start Services:
+2) Start Services:
 
     Option A: With Docker Compose (recommended)
-    ────────────────────────────────────────────
+    ----------------------------------------------------------------------
     docker-compose up -d
     npm start -w packages/api
 
     Option B: Manual Setup (Redis required locally)
-    ─────────────────────────────────────────────
+    ----------------------------------------------------------------------
     # Terminal 1: Start Redis
     redis-server
 
     # Terminal 2: Start API server
     npm start -w packages/api
 
-3️⃣  Access Services:
-    • API: http://localhost:4000
-    • Health Check: http://localhost:4000/api/health
-    • Open WebUI: http://localhost:8080
-    • Redis: localhost:6379
+3) Access Services:
+    - API: http://localhost:4000
+    - Health Check: http://localhost:4000/api/health
+    - Open WebUI: http://localhost:8080
+    - Redis: localhost:6379
 
-4️⃣  Test the API:
+4) Test the API:
     curl http://localhost:4000/api/health
 
-📚 Documentation:
-    • Setup Guide: ./SETUP.md
-    • Full README: ./README.md
-    • API Endpoints: http://localhost:4000/
+Documentation:
+    - Setup Guide: ./SETUP.md
+    - Full README: ./README.md
+    - API Endpoints: http://localhost:4000/
 
-╔════════════════════════════════════════════════════════════════════╗
+======================================================================
 
 EOF
 }
