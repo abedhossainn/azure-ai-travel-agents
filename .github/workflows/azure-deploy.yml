@@ -3,7 +3,7 @@ name: Deploy to Azure Container Instances
 on:
   push:
     branches:
-      - ai-travel-agent-phase2
+      - ai-travel-agent-phase3
 
 env:
   REGISTRY_LOGIN_SERVER: ${{ secrets.AZURE_REGISTRY_LOGIN_SERVER }}
@@ -42,7 +42,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     needs: build
-    if: success() && github.ref == 'refs/heads/ai-travel-agent-phase2'
+    if: success() && github.ref == 'refs/heads/ai-travel-agent-phase3'
     
     steps:
       - name: Checkout code

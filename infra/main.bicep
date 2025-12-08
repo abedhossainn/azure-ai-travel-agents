@@ -182,15 +182,15 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             }
             {
               name: 'GOOGLE_GENAI_API_KEY'
-              secureValue: googleGenaiApiKey
+              value: googleGenaiApiKey
             }
             {
               name: 'AMADEUS_CLIENT_ID'
-              secureValue: amadeusClientId
+              value: amadeusClientId
             }
             {
               name: 'AMADEUS_CLIENT_SECRET'
-              secureValue: amadeusClientSecret
+              value: amadeusClientSecret
             }
           ]
         }
